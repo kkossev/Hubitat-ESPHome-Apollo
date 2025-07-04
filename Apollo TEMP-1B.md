@@ -2,40 +2,80 @@
 
 ## ✨ Direct Hubitat Integration - No Home Assistant Required!
 
-This driver connects your Apollo Automation TEMP-1B **directly to Hubitat Elevation** based on the great work done by Jonathan Bradshaw (@jonathanb) - https://github.com/bradsjm/hubitat-public/tree/main/ESPHome, providing:
+This driver connects your Apollo Automation TEMP-1B **directly to Hubitat Elevation** thanks to the great work done by Jonathan Bradshaw (@jonathanb) - https://github.com/bradsjm/hubitat-public/tree/main/ESPHome 
 
 - **🚫 No Home Assistant Needed**: Direct WiFi connection to your Hubitat hub
 - **🚫 No YAML Files to Edit**: Simple IP address configuration - that's it!
 - **🚫 No Cloud Dependencies**: Everything runs locally on your network
-- **⚡ Easy Setup**: Install this driver package from HPM (Hubitat Package Manager), connect the device to your WiFi network, configure the IP address
+- **⚡ Easy Setup**: Install this driver package from HPM (Hubitat Package Manager), connect the device to your WiFi network, configure the IP address.
 - **🔧 Zero Configuration**: All device features work out-of-the-box
 - **🏠 Native Hubitat Integration**: Full support for Hubitat automations, dashboards, and apps
 
+![Made for ESPHome](https://esphome.io/_images/made-for-esphome-black-on-white.svg)
+
+
 Apollo Automation devices come **pre-flashed with ESPHome firmware** - just connect your TEMP-1B to your WiFi network and add the device IP address to this driver. No additional software, bridges, or complex configurations required!
+
+
+<details>
+<summary>Technical Specifications</summary>
+
+- **Microcontroller**: ESP32 with WiFi and Bluetooth
+- **Power**: CR123A or 16340 rechargeable battery
+- **Battery Life**: Up to 6 months with optimized sleep settings
+- **Temperature Accuracy**: ±0.5°C (probes), ±2°C (onboard sensor)
+- **Humidity Accuracy**: ±2% RH
+- **Operating Range**: -40°C to +85°C (-40°F to +185°F)
+- **Connectivity**: WiFi 802.11 b/g/n, Bluetooth 4.2
+- **Dimensions**: Compact 3D-printed enclosure
+- **Mounting**: Optional magnetic mount available
+</details>
+
+
+<details>
+<summary>Use Cases</summary>
+
+The Apollo Automation TEMP-1B is ideal for:
+
+- **Kitchen Monitoring**: Food temperature during cooking and baking
+- **Refrigeration**: Freezer and refrigerator temperature monitoring
+- **Aquarium Management**: Water temperature monitoring
+- **Pool/Spa Monitoring**: Water temperature tracking
+- **Greenhouse Monitoring**: Air and soil temperature monitoring
+- **HVAC Monitoring**: Room temperature and humidity tracking
+- **Server Room Monitoring**: Environmental condition monitoring
+
+</details>
+
 
 ## Apollo Automation TEMP-1B Device Description
 
 | Device Images | Device Features |
 |---------------|-----------------|
 | ![TEMP-1B Main Device](https://apolloautomation.com/cdn/shop/files/TEMP-1B_Fridge.png?v=1742996496&width=960) | **Main Device Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Battery-powered operation (CR123A or 16340 rechargeable battery)<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Humidity Range: 0-100% RH with ±2% accuracy<br/>• Onboard AHT20-F temperature and humidity sensor<br/>• RGB LED indicator with customizable colors<br/>• Buzzer for temperature alerts<br/>• 3.5mm jack for external probes<br/>• Up to 6 months battery life with sleep mode |
-| ![Temperature Probe](https://apolloautomation.com/cdn/shop/files/20241205-123547.jpg?v=1733420196&width=960) | **Temperature Probe Features:**<br/>• DS18B20 waterproof temperature sensor<br/>• Available in 20cm (~8in) and 1.5m (~5ft) lengths<br/>• Flat cable design prevents interference with fridge seals<br/>• Submersible and waterproof construction<br/>• Temperature Range: -55°C to +85°C (-67°F to +185°F)<br/>• ±0.5°C accuracy<br/>• Ideal for freezer, fridge, aquarium, and pool monitoring |
+| **Temperature Probe Features:**<br/>• DS18B20 waterproof temperature sensor<br/>• Available in 20cm (~8in) and 1.5m (~5ft) lengths<br/>• Flat cable design prevents interference with fridge seals<br/>• Submersible and waterproof construction<br/>• Temperature Range: -55°C to +85°C (-67°F to +185°F)<br/>• ±0.5°C accuracy<br/>• Ideal for freezer, fridge, aquarium, and pool monitoring | ![Temperature Probe](https://apolloautomation.com/cdn/shop/files/20241205-123547.jpg?v=1733420196&width=960) | 
 | ![Food Probe](https://apolloautomation.com/cdn/shop/files/TEMP-1_with_Food_Probe.png?v=1742996496&width=960) | **Food Probe Features:**<br/>• 1m (~3ft) stainless steel food-safe probe<br/>• NTC temperature sensor<br/>• Temperature Range: -40°C to +204°C (-40°F to +400°F)<br/>• Food-safe stainless steel construction<br/>• Perfect for grilling, baking, and cooking<br/>• Not dishwasher safe<br/>• Real-time temperature monitoring for perfect cooking results |
 
 ## Driver Description
 
 
-
 ### Major Attributes
 
-The Apollo Automation TEMP-1B Hubitat driver provides comprehensive monitoring and control capabilities through the following primary attributes:
+The Apollo Automation TEMP-1B driver provides comprehensive monitoring and control capabilities with dozens of available attributes. For everyday use, the driver displays only the essential attributes by default, keeping your device interface clean and focused. Advanced users can enable additional diagnostic attributes through the preferences when needed.
 
-#### Core Attributes
+#### Main Attributes
 - **`temperature`**: Primary temperature reading based on selected probe preference
 - **`humidity`**: Relative humidity from onboard AHT20-F sensor (0-100% RH)
 - **`networkStatus`**: Connection status ['connecting', 'online', 'offline']
 - **`rgbLight`**: RGB LED control ['on', 'off']
 
-### Complete Attribute List
+![Current States](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/current_states.png)
+
+### Advanced Attributes
+These advanced attributes, disabled by default, provide additional insights and control for power users seeking enhanced functionality. 
+
+<details>
+<summary>Complete Attribute List</summary>
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -64,25 +104,29 @@ The Apollo Automation TEMP-1B Hubitat driver provides comprehensive monitoring a
 | `minProbeTemp` | number | Minimum probe temperature threshold |
 | `maxProbeTemp` | number | Maximum probe temperature threshold |
 
-### Device Capabilities
+![Advanced Attributes](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/advanced_attributes.png)
 
-The driver implements the following Hubitat capabilities:
+</details>
 
-- **Sensor**: Basic sensor functionality
-- **Refresh**: Manual device refresh capability
-- **RelativeHumidityMeasurement**: Humidity sensing
-- **SignalStrength**: WiFi signal monitoring
-- **TemperatureMeasurement**: Temperature sensing
-- **Battery**: Battery level monitoring
-- **Initialize**: Device initialization
+----
 
 ### Commands
+
+#### initialize
+**Purpose**: Establishes connection to the device and starts monitoring
+**Usage**: Automatically called during device setup or manually from device commands
+
+#### refresh
+**Purpose**: Refreshes device information and clears cached data
+**Usage**: Manually refresh device status and request updated information from the device
 
 #### setRgbLight
 **Purpose**: Control the RGB LED indicator
 **Parameters**: 
 - `value`: LED state ['off', 'on']
 **Usage**: `setRgbLight('on')` or `setRgbLight('off')`
+
+![Commands](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/apollo-temp1(b)-hubitat-commands.png)
 
 ### Preferences
 
@@ -165,46 +209,6 @@ The device supports customizable alerts:
 - **🔧 Zero Maintenance**: Self-managing connection with automatic reconnection
 - **💻 Open Source**: Fully open-source firmware and hardware designs
 
-### Use Cases
 
-The Apollo Automation TEMP-1B is ideal for:
-
-- **Kitchen Monitoring**: Food temperature during cooking and baking
-- **Refrigeration**: Freezer and refrigerator temperature monitoring
-- **Aquarium Management**: Water temperature monitoring
-- **Pool/Spa Monitoring**: Water temperature tracking
-- **Greenhouse Monitoring**: Air and soil temperature monitoring
-- **HVAC Monitoring**: Room temperature and humidity tracking
-- **Server Room Monitoring**: Environmental condition monitoring
-
-<details>
-<summary><h3>Technical Specifications</h3></summary>
-
-- **Microcontroller**: ESP32 with WiFi and Bluetooth
-- **Power**: CR123A or 16340 rechargeable battery
-- **Battery Life**: Up to 6 months with optimized sleep settings
-- **Temperature Accuracy**: ±0.5°C (probes), ±2°C (onboard sensor)
-- **Humidity Accuracy**: ±2% RH
-- **Operating Range**: -40°C to +85°C (-40°F to +185°F)
-- **Connectivity**: WiFi 802.11 b/g/n, Bluetooth 4.2
-- **Dimensions**: Compact 3D-printed enclosure
-- **Mounting**: Optional magnetic mount available
-
-</details>
-
-
-[details="Summary"]
-This text will be hidden
-[/details]
-
-
-
-### Support and Resources
-
-- **Documentation**: Complete setup guides and troubleshooting
-- **Community**: Active Discord community for support
-- **Open Source**: GitHub repository with full source code
-- **Updates**: Regular firmware updates with new features
-- **Simple Setup**: No YAML editing required - driver handles all configuration automatically
 
 
