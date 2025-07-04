@@ -63,13 +63,15 @@ The Apollo Automation TEMP-1B is ideal for:
 
 The Apollo Automation TEMP-1B driver provides comprehensive monitoring and control capabilities with dozens of available attributes. For everyday use, the driver displays only the essential attributes by default, keeping your device interface clean and focused. Advanced users can enable additional diagnostic attributes through the preferences when needed.
 
+
+![Current States](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/current_states.png)
+
+
 #### Main Attributes
 - **`temperature`**: Primary temperature reading based on selected probe preference
 - **`humidity`**: Relative humidity from onboard AHT20-F sensor (0-100% RH)
 - **`networkStatus`**: Connection status ['connecting', 'online', 'offline']
 - **`rgbLight`**: RGB LED control ['on', 'off']
-
-![Current States](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/current_states.png)
 
 ### Advanced Attributes
 These advanced attributes, disabled by default, provide additional insights and control for power users seeking enhanced functionality. 
@@ -112,6 +114,8 @@ These advanced attributes, disabled by default, provide additional insights and 
 
 ### Commands
 
+![Commands](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/apollo-temp1(b)-hubitat-commands.png)
+
 #### initialize
 **Purpose**: Establishes connection to the device and starts monitoring
 **Usage**: Automatically called during device setup or manually from device commands
@@ -126,25 +130,26 @@ These advanced attributes, disabled by default, provide additional insights and 
 - `value`: LED state ['off', 'on']
 **Usage**: `setRgbLight('on')` or `setRgbLight('off')`
 
-![Commands](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/apollo-temp1(b)-hubitat-commands.png)
 
 ### Preferences
 
+![Preferences](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/345e1f0e161a63dd60192f76075ca2de28b37142/Images/apollo-temp-1(b)-hubitat-preferences.png)
+
 #### Basic Settings
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `logEnable` | bool | false | Enable debug logging for troubleshooting |
-| `txtEnable` | bool | true | Enable descriptive text logging |
-| `ipAddress` | text | (required) | Device IP address for ESPHome API connection |
-| `selectedProbe` | enum | 'Temperature' | Select primary temperature sensor ['Temperature', 'Food'] |
-| `boardHumidityOffset` | decimal | 0.0 | Board humidity calibration offset (-50% to +50%) |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `logEnable` | false | Enable debug logging for troubleshooting |
+| `txtEnable` | true | Enable descriptive text logging |
+| `ipAddress` | (required) | Device IP address for ESPHome API connection |
+| `selectedProbe` | 'Temperature' | Select primary temperature sensor ['Temperature', 'Food'] |
+| `boardHumidityOffset` | 0.0 | Board humidity calibration offset (-50% to +50%) |
 
 #### Advanced Options
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `password` | text | (optional) | Device password if required |
-| `diagnosticsReporting` | bool | false | Enable reporting of diagnostic attributes |
-| `logWarnEnable` | bool | true | Enable warning and info logging |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `password` | (optional) | Device password if required |
+| `diagnosticsReporting` | false | Enable reporting of diagnostic attributes |
+| `logWarnEnable` | true | Enable warning and info logging |
 
 ### Entity Management
 
