@@ -20,7 +20,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  * 
- *  ver. 1.0.0  2022-06-18 kkossev  - first beta version
+ *  ver. 1.0.0  2022-07-01 kkossev  - first beta version
  * 
  *                         TODO: check the restart() command - state.entities['restart'] 
  *                         TODO : LED control! 
@@ -29,10 +29,10 @@
 metadata {
     definition(
         name: 'ESPHome Apollo MSR-2',
-        namespace: 'esphome',
+        namespace: 'apollo',
         author: 'Krassimir Kossev',
         singleThreaded: true,
-        importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat/refs/heads/ESPHome/Drivers/ESPHome/Apollo%20MSR-2.groovy') {
+        importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat-ESPHome-Apollo/refs/heads/main/Apollo%20MSR-2.groovy') {
 
         capability 'Configuration'
         capability 'IlluminanceMeasurement'

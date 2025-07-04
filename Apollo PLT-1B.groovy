@@ -20,7 +20,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  *
- *  ver. 1.0.0  2022-06-29 kkossev  - first beta version
+ *  ver. 1.0.0  2025-07-01 kkossev  - first beta version
  * 
  *                         TODO: add driver version
 */
@@ -29,55 +29,58 @@ import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
 @Field static final String DRIVER_VERSION =  '1.0.0'
-@Field static final String DATE_TIME_STAMP = '07/01/2025 7:52 AM'
+@Field static final String DATE_TIME_STAMP = '07/01/2025 9:44 PM'
 
 metadata {
     definition(
-        name: 'ESPHome Apollo TEMP-1(B)',
+        name: 'ESPHome Apollo PLT-1(B)',
         namespace: 'apollo',
         author: 'Krassimir Kossev',
         singleThreaded: true,
-        importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat-ESPHome-Apollo/refs/heads/main/Apollo%20TEMP-1(B).groovy') {
+        importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat-ESPHome-Apollo/refs/heads/main/Apollo%20PLT-1B.groovy') {
 
         capability 'Sensor'
         capability 'Refresh'
         capability 'RelativeHumidityMeasurement'
         capability 'SignalStrength'
         capability 'TemperatureMeasurement'
+        capability 'IlluminanceMeasurement'
+        capability 'UltravioletIndex'
         capability 'Battery'
         capability 'Initialize'
 
         // attribute populated by ESPHome API Library automatically
         attribute 'networkStatus', 'enum', [ 'connecting', 'online', 'offline' ]
-        attribute "boardTemperature", "number"
+        attribute 'airTemperature', 'number'          // AHT20-F air temperature sensor
+        attribute 'airTemperatureOffset', 'number'    // Air temperature calibration offset
+        attribute 'airHumidityOffset', 'number'       // Air humidity calibration offset
         attribute 'espTemperature', 'number'
-        attribute 'temperatureProbe', 'number'  // Add this line
-        attribute "uptime", "number"
+        attribute 'soilMoisture', 'number'
+        attribute 'soilTemperature', 'number'         // Optional DS18B20 soil temperature probe
+        attribute 'soilAdc', 'number'                 // Soil ADC voltage measurement
+        attribute 'uptime', 'number'
         attribute 'rgbLight', 'enum', ['on', 'off'] 
-        attribute 'batteryVoltage', 'number'
-        attribute 'foodProbe', 'number'
-        attribute 'alarmOutsideTempRange', 'enum', ['on', 'off']
-        attribute 'tempProbeOffset', 'number'
-        attribute 'foodProbeOffset', 'number'
-        attribute 'boardTemperatureOffset', 'number'
-        attribute 'boardHumidityOffset', 'number'
-        attribute 'notifyOnlyOutsideTempDifference', 'enum', ['on', 'off']
+        attribute 'batteryVoltage', 'number'          // Battery voltage measurement
+        attribute 'accessoryPower', 'enum', ['on', 'off']  // Control for sensor power (PLT-1 only)
         attribute 'preventSleep', 'enum', ['on', 'off']
-        attribute 'selectedProbe', 'string'
+        attribute 'sleepAfterConnecting', 'enum', ['on', 'off']  // PLT-1 only
         attribute 'sleepDuration', 'number'
-        attribute 'probeTempDifferenceThreshold', 'number'
-        attribute 'minProbeTemp', 'number'
-        attribute 'maxProbeTemp', 'number'
+        attribute 'selectedSensor', 'string'          // PLT-1 only
+        attribute 'waterVoltage100', 'number'         // 100% water voltage calibration
+        attribute 'dryVoltage', 'number'              // Dry soil voltage calibration
+        attribute 'firmwareUpdate', 'string'          // Firmware update status
 
         command 'setRgbLight', [[name:'LED control', type: 'ENUM', constraints: ['off', 'on']]]
+        command 'setAccessoryPower', [[name:'Accessory Power control', type: 'ENUM', constraints: ['off', 'on']]]
     }
 
     preferences {
         input name: 'logEnable', type: 'bool', title: 'Enable Debug Logging', required: false, defaultValue: false    // if enabled the library will log debug details
         input name: 'txtEnable', type: 'bool', title: 'Enable descriptionText logging', required: false, defaultValue: true
         input name: 'ipAddress', type: 'text', title: 'Device IP Address', required: true    // required setting for API library
-        input name: 'selectedProbe', type: 'enum', title: 'Temperature Sensor Selection', required: false, options: ['Temperature', 'Food'], defaultValue: 'Temperature', description: 'Select which sensor to use for main temperature attribute'    // allows the user to select which sensor to use for temperature
-        input name: 'boardHumidityOffset', type: 'decimal', title: 'Board Humidity Offset (%)', required: false, defaultValue: 0.0, range: '-50..50', description: 'Calibration offset for board humidity sensor'
+        input name: 'temperaturePreference', type: 'enum', title: 'Primary Temperature Display', required: false, options: ['Air', 'Soil'], defaultValue: 'Air', description: 'Select which sensor to use for main temperature attribute (applies to both devices)'    
+        input name: 'airTemperatureOffset', type: 'decimal', title: 'Air Temperature Offset', required: false, defaultValue: 0.0, description: 'Temperature calibration offset in degrees (positive or negative)'
+        input name: 'airHumidityOffset', type: 'decimal', title: 'Air Humidity Offset', required: false, defaultValue: 0.0, description: 'Humidity calibration offset in percent (positive or negative)'
         input name: 'advancedOptions', type: 'bool', title: '<b>Advanced Options</b>', description: 'Flip to see or hide the advanced options', defaultValue: false
         if (advancedOptions == true) {
             input name: 'password', type: 'text', title: 'Device Password <i>(if required)</i>', required: false     // optional setting for API library
@@ -88,31 +91,37 @@ metadata {
 }
 
 @Field static final Map<String, Map<String, Object>> ALL_ENTITIES = [
-    'alarm_outside_temp_range':            [attr: 'alarmOutsideTempRange',          isDiag: true,  type: 'switch',      description: 'Temperature range alarm switch'],
-    'battery_level':                       [attr: 'battery',                        isDiag: false, type: 'sensor',      description: 'Battery charge level percentage'],
-    'battery_voltage':                     [attr: 'batteryVoltage',                 isDiag: false, type: 'sensor',      description: 'Battery voltage measurement'],
-    'board_humidity':                      [attr: 'humidity',                       isDiag: false, type: 'sensor',      description: 'Humidity'],                                   // Internal board humidity sensor reading
-    'board_humidity_offset':               [attr: 'boardHumidityOffset',            isDiag: true,  type: 'offset',      description: 'Board humidity sensor calibration offset'],
-    'board_temperature':                   [attr: 'boardTemperature',               isDiag: true,  type: 'temperature', description: 'Internal board temperature sensor reading'],
-    'board_temperature_offset':            [attr: 'boardTemperatureOffset',         isDiag: true,  type: 'offset',      description: 'Board temperature sensor calibration offset'],
+    // PLT-1B specific entities (based on actual device data)
+    '100__water_voltage':                  [attr: 'waterVoltage100',                isDiag: true,  type: 'config',      description: '100% water voltage calibration threshold'],
+    'air_humidity_offset':                 [attr: 'airHumidityOffset',              isDiag: true,  type: 'offset',      description: 'Air humidity calibration offset'],
+    'air_temperature_offset':              [attr: 'airTemperatureOffset',           isDiag: true,  type: 'offset',      description: 'Air temperature calibration offset'],
+    'soil_adc':                            [attr: 'soilAdc',                        isDiag: true,  type: 'sensor',      description: 'Soil ADC voltage measurement'],
+    
+    // Common entities (present in both PLT-1 and PLT-1B)
+    'air_humidity':                        [attr: 'humidity',                       isDiag: false, type: 'sensor',      description: 'Air humidity sensor (AHT20-F)'],
+    'air_temperature':                     [attr: 'airTemperature',                 isDiag: false, type: 'temperature', description: 'Air temperature sensor (AHT20-F)'],
+    'dry_voltage':                         [attr: 'dryVoltage',                     isDiag: true,  type: 'config',      description: 'Dry soil voltage calibration threshold'],
     'esp_reboot':                          [attr: 'espReboot',                      isDiag: true,  type: 'button',      description: 'ESP device reboot button'],
     'esp_temperature':                     [attr: 'espTemperature',                 isDiag: true,  type: 'temperature', description: 'ESP32 chip internal temperature'],
     'factory_reset_esp':                   [attr: 'factoryResetEsp',                isDiag: true,  type: 'button',      description: 'Factory reset ESP device button'],
-    'food_probe':                          [attr: 'foodProbe',                      isDiag: true,  type: 'temperature', description: 'External food probe temperature reading'],
-    'food_probe_offset':                   [attr: 'foodProbeOffset',                isDiag: true,  type: 'offset',      description: 'Food probe calibration offset'],
-    'max_probe_temp':                      [attr: 'maxProbeTemp',                   isDiag: true,  type: 'config',      description: 'Maximum valid probe temperature threshold'],
-    'min_probe_temp':                      [attr: 'minProbeTemp',                   isDiag: true,  type: 'config',      description: 'Minimum valid probe temperature threshold'],
-    'notify_only_outside_temp_difference': [attr: 'notifyOnlyOutsideTempDifference',isDiag: true,  type: 'switch',      description: 'Notify only when outside temperature difference threshold'],
+    'firmware_update':                     [attr: 'firmwareUpdate',                 isDiag: true,  type: 'status',      description: 'Firmware update status'],
+    'ltr390_light':                        [attr: 'illuminance',                    isDiag: false, type: 'sensor',      description: 'LTR390 ambient light sensor'],
+    'ltr390_uv_index':                     [attr: 'ultravioletIndex',               isDiag: false, type: 'sensor',      description: 'LTR390 UV index sensor'],
     'online':                              [attr: 'networkStatus',                  isDiag: true,  type: 'status',      description: 'Network connection status'],
     'prevent_sleep':                       [attr: 'preventSleep',                   isDiag: true,  type: 'switch',      description: 'Prevent device sleep mode switch'],
-    'probe_temp_difference_threshold':     [attr: 'probeTempDifferenceThreshold',   isDiag: true,  type: 'config',      description: 'Temperature difference threshold for notifications'],
     'rgb_light':                           [attr: 'rgbLight',                       isDiag: false, type: 'light',       description: 'RGB status light control'],
     'rssi':                                [attr: 'rssi',                           isDiag: true,  type: 'signal',      description: 'WiFi signal strength indicator'],
-    'select_probe':                        [attr: 'selectedProbe',                  isDiag: true,  type: 'selector',    description: 'Active temperature probe selection'],
     'sleep_duration':                      [attr: 'sleepDuration',                  isDiag: true,  type: 'config',      description: 'Device sleep duration between measurements'],
-    'temperature_probe':                   [attr: 'temperatureProbe',               isDiag: true,  type: 'temperature', description: 'Primary external temperature probe reading'],
-    'temp_probe_offset':                   [attr: 'tempProbeOffset',                isDiag: true,  type: 'offset',      description: 'Temperature probe calibration offset'],
-    'uptime':                              [attr: 'uptime',                         isDiag: true,  type: 'status',      description: 'Device uptime since last restart']
+    'soil_moisture':                       [attr: 'soilMoisture',                   isDiag: false, type: 'sensor',      description: 'Soil moisture sensor'],
+    'soil_temperature':                    [attr: 'soilTemperature',                isDiag: false, type: 'temperature', description: 'Soil temperature sensor (DS18B20 probe)'],
+    'uptime':                              [attr: 'uptime',                         isDiag: true,  type: 'status',      description: 'Device uptime since last restart'],
+    
+    // PLT-1 specific entities (may be present in some devices)
+    'accessory_power':                     [attr: 'accessoryPower',                 isDiag: false, type: 'switch',      description: 'Accessory power control switch'],
+    'battery_level':                       [attr: 'battery',                        isDiag: false, type: 'sensor',      description: 'Battery charge level percentage'],
+    'battery_voltage':                     [attr: 'batteryVoltage',                 isDiag: false, type: 'sensor',      description: 'Battery voltage measurement'],
+    'select_sensor':                       [attr: 'selectedSensor',                 isDiag: true,  type: 'selector',    description: 'Active temperature sensor selection'],
+    'sleep_after_connecting':              [attr: 'sleepAfterConnecting',           isDiag: true,  type: 'switch',      description: 'Sleep after connecting switch']
 ]
 
 /**
@@ -236,60 +245,88 @@ public void updated() {
         }
     }
     
-    // Sync temperature preference with ESPHome select_probe entity
-    if (settings.selectedProbe) {
+    // Sync temperature preference with ESPHome select_sensor entity (PLT-1 only)
+    if (settings.temperaturePreference) {
         syncTemperatureSelection()
     }
     
-    // Sync board humidity offset preference with ESPHome
-    if (settings.boardHumidityOffset != null) {
-        syncBoardHumidityOffset()
+    // Sync air humidity offset preference with ESPHome (PLT-1B has air_humidity_offset entity)
+    if (settings.airHumidityOffset != null) {
+        syncAirHumidityOffset()
+    }
+    
+    // Sync air temperature offset preference with ESPHome (PLT-1B has air_temperature_offset entity)
+    if (settings.airTemperatureOffset != null) {
+        syncAirTemperatureOffset()
     }
     
     initialize()
 }
 
 private void syncTemperatureSelection() {
-    // Find the select_probe entity key
+    // Find the select_sensor entity key
     def selectKey = null
     state.entities?.each { key, entity ->
-        if (entity.objectId == 'select_probe') {
+        if (entity.objectId == 'select_sensor') {
             selectKey = key as Long
         }
     }
     
     if (selectKey == null) {
         if (logEnable) { 
-            log.warn "Select probe entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
+            log.warn "Select sensor entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
         }
         return
     }
     
-    String selectedProbe = settings.selectedProbe
-    if (txtEnable) { log.info "${device} syncing selected probe to ${selectedProbe} (key: ${selectKey})" }
+    String selectedSensor = settings.temperaturePreference
+    if (txtEnable) { log.info "${device} syncing selected sensor to ${selectedSensor} (key: ${selectKey})" }
     
     // Send the selection to ESPHome
-    espHomeSelectCommand(key: selectKey, state: selectedProbe)
+    espHomeSelectCommand(key: selectKey, state: selectedSensor)
 }
 
-private void syncBoardHumidityOffset() {
-    // Find the board_humidity_offset entity key
+private void syncAirHumidityOffset() {
+    // Find the air_humidity_offset entity key (if it exists)
     def offsetKey = null
     state.entities?.each { key, entity ->
-        if (entity.objectId == 'board_humidity_offset') {
+        if (entity.objectId == 'air_humidity_offset') {
             offsetKey = key as Long
         }
     }
     
     if (offsetKey == null) {
         if (logEnable) { 
-            log.warn "Board humidity offset entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
+            log.warn "Air humidity offset entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
         }
         return
     }
     
-    Float offset = settings.boardHumidityOffset as Float
-    if (txtEnable) { log.info "${device} syncing board humidity offset to ${offset}% (key: ${offsetKey})" }
+    Float offset = settings.airHumidityOffset as Float
+    if (txtEnable) { log.info "${device} syncing air humidity offset to ${offset}% (key: ${offsetKey})" }
+    
+    // Send the offset to ESPHome
+    espHomeNumberCommand(key: offsetKey, state: offset)
+}
+
+private void syncAirTemperatureOffset() {
+    // Find the air_temperature_offset entity key (if it exists)
+    def offsetKey = null
+    state.entities?.each { key, entity ->
+        if (entity.objectId == 'air_temperature_offset') {
+            offsetKey = key as Long
+        }
+    }
+    
+    if (offsetKey == null) {
+        if (logEnable) { 
+            log.warn "Air temperature offset entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
+        }
+        return
+    }
+    
+    Float offset = settings.airTemperatureOffset as Float
+    if (txtEnable) { log.info "${device} syncing air temperature offset to ${offset}° (key: ${offsetKey})" }
     
     // Send the offset to ESPHome
     espHomeNumberCommand(key: offsetKey, state: offset)
@@ -334,6 +371,9 @@ void parseKeys(final Map message) {
         if (message.objectId == 'rgb_light') {
             state.rgbLightKey = key
         }
+        if (message.objectId == 'accessory_power') {
+            state.accessoryPowerKey = key
+        }
         
         if (logEnable) { 
             log.debug "entity registered: ${message.objectId} (key=${key}, platform=${message.platform})" 
@@ -344,7 +384,6 @@ void parseKeys(final Map message) {
         }
     }
 }
-
 
 void parseState(final Map message) {
     if (message.key == null) { return }
@@ -376,15 +415,30 @@ void parseState(final Map message) {
         case 'rgb_light':
             handleRgbLightState(message)
             break
-        case 'select_probe':
-            handleSelectProbeState(message)
+        case 'accessory_power':
+            handleAccessoryPowerState(message)
             break
-        case 'food_probe':
-        case 'temperature_probe':
+        case 'prevent_sleep':
+            handlePreventSleepState(message)
+            break
+        case 'select_sensor':
+            handleSelectSensorState(message)
+            break
+        case 'soil_temperature':
+        case 'air_temperature':
             handleTemperatureState(message, entity)
             break
-        case 'board_humidity':
+        case 'air_humidity':
             handleHumidityState(message, entity)
+            break
+        case 'ltr390_light':
+            handleIlluminanceState(message, entity)
+            break
+        case 'ltr390_uv_index':
+            handleUVIndexState(message, entity)
+            break
+        case 'soil_moisture':
+            handleSoilMoistureState(message, entity)
             break
         default:
             // Use common handler for most entities
@@ -392,7 +446,6 @@ void parseState(final Map message) {
             break
     }
 }
-
 
 /**
  * Common handler for most entity state updates
@@ -437,13 +490,21 @@ private void handleGenericEntityState(Map message, Map entity) {
                 processedValue = rawValue as Float
                 formattedValue = String.format("%.1f", processedValue)
                 
-                // Special case: Sync board humidity offset preference
-                if (objectId == 'board_humidity_offset') {
-                    Float currentPref = settings.boardHumidityOffset as Float
+                // Special case: Sync offset preferences with ESPHome values
+                if (objectId == 'air_humidity_offset') {
+                    Float currentPref = settings.airHumidityOffset as Float
                     if (currentPref != processedValue) {
-                        device.updateSetting('boardHumidityOffset', processedValue)
+                        device.updateSetting('airHumidityOffset', processedValue)
                         if (txtEnable && shouldReportDiagnostic(objectId)) {
-                            log.info "Board humidity offset preference synced from ESPHome to ${processedValue}%"
+                            log.info "Air humidity offset preference synced from ESPHome to ${processedValue}%"
+                        }
+                    }
+                } else if (objectId == 'air_temperature_offset') {
+                    Float currentPref = settings.airTemperatureOffset as Float
+                    if (currentPref != processedValue) {
+                        device.updateSetting('airTemperatureOffset', processedValue)
+                        if (txtEnable && shouldReportDiagnostic(objectId)) {
+                            log.info "Air temperature offset preference synced from ESPHome to ${processedValue}°"
                         }
                     }
                 }
@@ -457,13 +518,8 @@ private void handleGenericEntityState(Map message, Map entity) {
             break
             
         case 'sensor':
-            if (rawValue instanceof Float) {
-                processedValue = rawValue as Float
-                formattedValue = String.format("%.1f", processedValue)
-            } else {
-                processedValue = rawValue as Integer
-                formattedValue = processedValue.toString()
-            }
+            processedValue = rawValue as Float
+            formattedValue = String.format("%.2f", processedValue)
             break
             
         case 'config':
@@ -472,12 +528,9 @@ private void handleGenericEntityState(Map message, Map entity) {
                 Float temp = convertTemperature(tempC)
                 processedValue = temp
                 formattedValue = String.format("%.1f", temp)
-            } else if (rawValue instanceof Float) {
-                processedValue = rawValue as Float
-                formattedValue = String.format("%.1f", processedValue)
             } else {
-                processedValue = rawValue as Integer
-                formattedValue = processedValue.toString()
+                processedValue = rawValue as Float
+                formattedValue = String.format("%.2f", processedValue)
             }
             break
             
@@ -528,7 +581,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
 }
 
-/**
+ /**
  * Check if the specified value is null or empty
  * @param value value to check
  * @return true if the value is null or empty, false otherwise
@@ -536,7 +589,6 @@ private void handleGenericEntityState(Map message, Map entity) {
 private static boolean isNullOrEmpty(final Object value) {
     return value == null || (value as String).trim().isEmpty()
 }
-
 
 void setRgbLight(String value) {
     def lightKey = state.rgbLightKey
@@ -557,7 +609,35 @@ void setRgbLight(String value) {
     }
 }
 
+void setAccessoryPower(String value) {
+    def powerKey = state.accessoryPowerKey
+    
+    if (powerKey == null) {
+        log.warn "Accessory power entity not found"
+        return
+    }
+    
+    if (value == 'on') {
+        if (txtEnable) { log.info "${device} Accessory power on" }
+        espHomeSwitchCommand(key: powerKey, state: true)
+    } else if (value == 'off') {
+        if (txtEnable) { log.info "${device} Accessory power off" }
+        espHomeSwitchCommand(key: powerKey, state: false)
+    } else {
+        log.warn "Unsupported accessory power value: ${value}"
+    }
+}
 
+private void handleAccessoryPowerState(Map message) {
+    // For switch entities, check for 'state' directly since they don't use 'hasState'
+    if (message.state != null) {
+        def powerState = message.state as Boolean
+        sendEvent(name: "accessoryPower", value: powerState ? 'on' : 'off', descriptionText: "Accessory Power is ${powerState ? 'on' : 'off'}")
+        if (txtEnable) { log.info "Accessory Power is ${powerState ? 'on' : 'off'}" }
+    } else {
+        if (logEnable) { log.warn "Accessory power message does not contain state: ${message}" }
+    }
+}
 
 private void handleRgbLightState(Map message) {
     // For light entities, check for 'state' directly since they don't use 'hasState'
@@ -570,8 +650,23 @@ private void handleRgbLightState(Map message) {
     }
 }
 
+private void handlePreventSleepState(Map message) {
+    // For switch entities, check for 'state' directly since they don't use 'hasState'
+    if (message.state != null) {
+        def sleepState = message.state as Boolean
+        if (shouldReportDiagnostic('prevent_sleep')) {
+            sendEvent(name: "preventSleep", value: sleepState ? 'on' : 'off', descriptionText: "Prevent Sleep is ${sleepState ? 'on' : 'off'}")
+        }
+        if (txtEnable && shouldReportDiagnostic('prevent_sleep')) { 
+            log.info "Prevent Sleep is ${sleepState ? 'on' : 'off'}" 
+        }
+    } else {
+        if (logEnable) { log.warn "Prevent sleep message does not contain state: ${message}" }
+    }
+}
+
 /**
- * Handle temperature probe entities (food_probe and temperature_probe)
+ * Handle temperature sensor entities (soil_temperature and air_temperature)
  * @param message state message from ESPHome
  * @param entity entity information from state.entities
  */
@@ -594,26 +689,27 @@ private void handleTemperatureState(Map message, Map entity) {
     String attributeName = entityInfo.attr
     String description = entityInfo.description
     
-    // Get the previous individual probe temperature value
-    def currentProbeState = device.currentState(attributeName)
-    String previousProbeValue = currentProbeState?.value
+    // Get the previous individual sensor temperature value
+    def currentSensorState = device.currentState(attributeName)
+    String previousSensorValue = currentSensorState?.value
     
-    // Send individual probe events only when Debug logging is enabled AND value has changed
-    if (settings.logEnable && previousProbeValue != tempStr) {
+    // Send individual sensor events only when Debug logging is enabled AND value has changed
+    if (settings.logEnable && previousSensorValue != tempStr) {
         sendEvent(name: attributeName, value: tempStr, unit: unit, descriptionText: "${description} is ${tempStr} ${unit}")
         log.info "${description} is ${tempStr} ${unit}"
     }
     
-    // Update main temperature attribute based on selected probe
-    String selectedProbeType = (objectId == 'food_probe') ? 'Food' : 'Temperature'
-    if (settings.selectedProbe == selectedProbeType) {
+    // Update main temperature attribute based on temperature preference
+    String selectedSensorType = (objectId == 'soil_temperature') ? 'Soil' : 'Air'
+    String userPreference = settings.temperaturePreference ?: 'Air'  // Default to Air if not set
+    if (userPreference == selectedSensorType) {
         // Get the previous main temperature value
         def currentMainTempState = device.currentState("temperature")
         String previousMainValue = currentMainTempState?.value
         
         // Only update main temperature if the value has changed
         if (previousMainValue != tempStr) {
-            String mainDescription = "Temperature is ${tempStr} ${unit}"  // Create new variable instead of reassigning
+            String mainDescription = "Temperature is ${tempStr} ${unit}"
             sendEvent(name: "temperature", value: tempStr, unit: unit, descriptionText: mainDescription)
             if (txtEnable) { 
                 log.info "${mainDescription}" 
@@ -627,37 +723,37 @@ private void handleTemperatureState(Map message, Map entity) {
     }
 }
 
-private void handleSelectProbeState(Map message) {
+private void handleSelectSensorState(Map message) {
     if (message.hasState) {
-        def selectedProbe = message.state as String
+        def selectedSensor = message.state as String
         
-        if (shouldReportDiagnostic('select_probe')) {
-            sendEvent(name: "selectedProbe", value: selectedProbe, descriptionText: "Selected probe is ${selectedProbe}")
+        if (shouldReportDiagnostic('select_sensor')) {
+            sendEvent(name: "selectedSensor", value: selectedSensor, descriptionText: "Selected sensor is ${selectedSensor}")
         }
         
         // Only log if diagnostic reporting allows it
-        if (txtEnable && shouldReportDiagnostic('select_probe')) { 
-            log.info "ESPHome selected probe changed to: ${selectedProbe}" 
+        if (txtEnable && shouldReportDiagnostic('select_sensor')) { 
+            log.info "ESPHome selected sensor changed to: ${selectedSensor}" 
         }
         
         // Sync the preference setting with ESPHome selection (avoid loops)
-        if (settings.selectedProbe != selectedProbe) {
-            device.updateSetting('selectedProbe', selectedProbe)
-            if (txtEnable && shouldReportDiagnostic('select_probe')) { 
-                log.info "Selected probe preference synced from ESPHome to ${selectedProbe}" 
+        if (settings.selectedSensor != selectedSensor) {
+            device.updateSetting('selectedSensor', selectedSensor)
+            if (txtEnable && shouldReportDiagnostic('select_sensor')) { 
+                log.info "Selected sensor preference synced from ESPHome to ${selectedSensor}" 
             }
         }
         
-        if (txtEnable && shouldReportDiagnostic('select_probe')) { 
-            log.info "Selected probe is ${selectedProbe}" 
+        if (txtEnable && shouldReportDiagnostic('select_sensor')) { 
+            log.info "Selected sensor is ${selectedSensor}" 
         }
     } else {
-        if (logEnable) { log.warn "Select probe message does not have state: ${message}" }
+        if (logEnable) { log.warn "Select sensor message does not have state: ${message}" }
     }
 }
 
 /**
- * Handle humidity sensor entity (board_humidity)
+ * Handle humidity sensor entity (air_humidity)
  * @param message state message from ESPHome
  * @param entity entity information from state.entities
  */
@@ -685,12 +781,129 @@ private void handleHumidityState(Map message, Map entity) {
     
     // Only send event and log if the value has changed
     if (previousValue != humidityStr) {
-        // Always send humidity event (board_humidity is isDiag: false)
+        // Always send humidity event (air_humidity is isDiag: false)
         sendEvent(name: attributeName, value: humidityStr, unit: unit, descriptionText: "${description} is ${humidityStr} ${unit}")
         
         // Always log humidity (it's not a diagnostic attribute)
         if (txtEnable) { 
             log.info "${description} is ${humidityStr} ${unit}" 
+        }
+    }
+}
+
+/**
+ * Handle illuminance sensor entity (ltr390_light)
+ * @param message state message from ESPHome
+ * @param entity entity information from state.entities
+ */
+private void handleIlluminanceState(Map message, Map entity) {
+    if (!message.hasState) {
+        return
+    }
+    
+    String objectId = entity.objectId
+    def entityInfo = getEntityInfo(objectId)
+    if (!entityInfo) {
+        if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
+        return
+    }
+    
+    Float illuminance = message.state as Float
+    String illuminanceStr = String.format("%.1f", illuminance)
+    String attributeName = entityInfo.attr
+    String description = entityInfo.description
+    String unit = "lux"  // Standard unit for illuminance
+    
+    // Get the previous illuminance value from current state
+    def currentIlluminanceState = device.currentState(attributeName)
+    String previousValue = currentIlluminanceState?.value
+    
+    // Only send event and log if the value has changed
+    if (previousValue != illuminanceStr) {
+        // Always send illuminance event (ltr390_light is isDiag: false)
+        sendEvent(name: attributeName, value: illuminanceStr, unit: unit, descriptionText: "${description} is ${illuminanceStr} ${unit}")
+        
+        // Always log illuminance (it's not a diagnostic attribute)
+        if (txtEnable) { 
+            log.info "${description} is ${illuminanceStr} ${unit}" 
+        }
+    }
+}
+
+/**
+ * Handle UV index sensor entity (ltr390_uv_index)
+ * @param message state message from ESPHome
+ * @param entity entity information from state.entities
+ */
+private void handleUVIndexState(Map message, Map entity) {
+    if (!message.hasState) {
+        return
+    }
+    
+    String objectId = entity.objectId
+    def entityInfo = getEntityInfo(objectId)
+    if (!entityInfo) {
+        if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
+        return
+    }
+    
+    Float uvIndex = message.state as Float
+    String uvIndexStr = String.format("%.5f", uvIndex)  // More precision for UV index
+    String attributeName = entityInfo.attr
+    String description = entityInfo.description
+    String unit = "UVI"  // UV Index unit
+    
+    // Get the previous UV index value from current state
+    def currentUVState = device.currentState(attributeName)
+    String previousValue = currentUVState?.value
+    
+    // Only send event and log if the value has changed
+    if (previousValue != uvIndexStr) {
+        // Always send UV index event (ltr390_uv_index is isDiag: false)
+        sendEvent(name: attributeName, value: uvIndexStr, unit: unit, descriptionText: "${description} is ${uvIndexStr} ${unit}")
+        
+        // Always log UV index (it's not a diagnostic attribute)
+        if (txtEnable) { 
+            log.info "${description} is ${uvIndexStr} ${unit}" 
+        }
+    }
+}
+
+/**
+ * Handle soil moisture sensor entity
+ * @param message state message from ESPHome
+ * @param entity entity information from state.entities
+ */
+private void handleSoilMoistureState(Map message, Map entity) {
+    if (!message.hasState) {
+        return
+    }
+    
+    String objectId = entity.objectId
+    def entityInfo = getEntityInfo(objectId)
+    if (!entityInfo) {
+        if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
+        return
+    }
+    
+    Float moisture = message.state as Float
+    String moistureStr = String.format("%.1f", moisture)
+    String attributeName = entityInfo.attr
+    String description = entityInfo.description
+    String unit = "%"  // Percentage unit for soil moisture
+    
+    // Get the previous moisture value from current state
+    def currentMoistureState = device.currentState(attributeName)
+    String previousValue = currentMoistureState?.value
+    
+    // Only send event and log if the value has changed
+    if (previousValue != moistureStr) {
+        // Always send moisture event (soil_moisture is isDiag: false)
+        sendEvent(name: attributeName, value: moistureStr, unit: unit, descriptionText: "${description} is ${moistureStr} ${unit}")
+        
+        // Always log moisture (it's not a diagnostic attribute)
+        if (txtEnable) { 
+            log.info "${description} is ${moistureStr} ${unit}" 
         }
     }
 }
@@ -730,7 +943,7 @@ public void checkDriverVersion() {
     }
 }
 
-
 // Put this line at the end of the driver to include the ESPHome API library helper
 
 #include esphome.espHomeApiHelperKKmod
+
