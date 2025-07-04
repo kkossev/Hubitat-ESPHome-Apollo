@@ -1,53 +1,68 @@
-# Apollo Automation TEMP-1B Driver for Hubitat Elevaion
+# Apollo Automation TEMP-1B Driver for Hubitat Elevation
+
+## ✨ Direct Hubitat Integration - No Home Assistant Required!
+
+This driver connects your Apollo Automation TEMP-1B **directly to Hubitat Elevation** based on the great work done by Jonathan Bradshaw (@jonathanb) - https://github.com/bradsjm/hubitat-public/tree/main/ESPHome, providing:
+
+- **🚫 No Home Assistant Needed**: Direct WiFi connection to your Hubitat hub
+- **🚫 No YAML Files to Edit**: Simple IP address configuration - that's it!
+- **🚫 No Cloud Dependencies**: Everything runs locally on your network
+- **⚡ Easy Setup**: Install this driver package from HPM (Hubitat Package Manager), connect the device to your WiFi network, configure the IP address
+- **🔧 Zero Configuration**: All device features work out-of-the-box
+- **🏠 Native Hubitat Integration**: Full support for Hubitat automations, dashboards, and apps
+
+Apollo Automation devices come **pre-flashed with ESPHome firmware** - just connect your TEMP-1B to your WiFi network and add the device IP address to this driver. No additional software, bridges, or complex configurations required!
 
 ## Apollo Automation TEMP-1B Device Description
 
 | Device Images | Device Features |
 |---------------|-----------------|
-| ![TEMP-1B Main Device](https://apolloautomation.com/cdn/shop/files/TEMP-1B_Fridge.png?v=1742996496&width=1920) | **Main Device Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Battery-powered operation (CR123A or 16340 rechargeable battery)<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Humidity Range: 0-100% RH with ±2% accuracy<br/>• Onboard AHT20-F temperature and humidity sensor<br/>• RGB LED indicator with customizable colors<br/>• Buzzer for temperature alerts<br/>• 3.5mm jack for external probes<br/>• Up to 6 months battery life with sleep mode |
-| ![Temperature Probe](https://apolloautomation.com/cdn/shop/files/20241205-123547.jpg?v=1733420196&width=1920) | **Temperature Probe Features:**<br/>• DS18B20 waterproof temperature sensor<br/>• Available in 20cm (~8in) and 1.5m (~5ft) lengths<br/>• Flat cable design prevents interference with fridge seals<br/>• Submersible and waterproof construction<br/>• Temperature Range: -55°C to +85°C (-67°F to +185°F)<br/>• ±0.5°C accuracy<br/>• Ideal for freezer, fridge, aquarium, and pool monitoring |
-| ![Food Probe](https://apolloautomation.com/cdn/shop/files/TEMP-1_with_Food_Probe.png?v=1742996496&width=1920) | **Food Probe Features:**<br/>• 1m (~3ft) stainless steel food-safe probe<br/>• NTC temperature sensor<br/>• Temperature Range: -40°C to +204°C (-40°F to +400°F)<br/>• Food-safe stainless steel construction<br/>• Perfect for grilling, baking, and cooking<br/>• Not dishwasher safe<br/>• Real-time temperature monitoring for perfect cooking results |
+| ![TEMP-1B Main Device](https://apolloautomation.com/cdn/shop/files/TEMP-1B_Fridge.png?v=1742996496&width=960) | **Main Device Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Battery-powered operation (CR123A or 16340 rechargeable battery)<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Humidity Range: 0-100% RH with ±2% accuracy<br/>• Onboard AHT20-F temperature and humidity sensor<br/>• RGB LED indicator with customizable colors<br/>• Buzzer for temperature alerts<br/>• 3.5mm jack for external probes<br/>• Up to 6 months battery life with sleep mode |
+| ![Temperature Probe](https://apolloautomation.com/cdn/shop/files/20241205-123547.jpg?v=1733420196&width=960) | **Temperature Probe Features:**<br/>• DS18B20 waterproof temperature sensor<br/>• Available in 20cm (~8in) and 1.5m (~5ft) lengths<br/>• Flat cable design prevents interference with fridge seals<br/>• Submersible and waterproof construction<br/>• Temperature Range: -55°C to +85°C (-67°F to +185°F)<br/>• ±0.5°C accuracy<br/>• Ideal for freezer, fridge, aquarium, and pool monitoring |
+| ![Food Probe](https://apolloautomation.com/cdn/shop/files/TEMP-1_with_Food_Probe.png?v=1742996496&width=960) | **Food Probe Features:**<br/>• 1m (~3ft) stainless steel food-safe probe<br/>• NTC temperature sensor<br/>• Temperature Range: -40°C to +204°C (-40°F to +400°F)<br/>• Food-safe stainless steel construction<br/>• Perfect for grilling, baking, and cooking<br/>• Not dishwasher safe<br/>• Real-time temperature monitoring for perfect cooking results |
 
 ## Driver Description
+
+
 
 ### Major Attributes
 
 The Apollo Automation TEMP-1B Hubitat driver provides comprehensive monitoring and control capabilities through the following primary attributes:
 
 #### Core Attributes
-- **`temperature`** (number): Primary temperature reading based on selected probe preference
-- **`humidity`** (number): Relative humidity from onboard AHT20-F sensor (0-100% RH)
-- **`networkStatus`** (enum): Connection status ['connecting', 'online', 'offline']
-- **`rgbLight`** (enum): RGB LED control ['on', 'off']
+- **`temperature`**: Primary temperature reading based on selected probe preference
+- **`humidity`**: Relative humidity from onboard AHT20-F sensor (0-100% RH)
+- **`networkStatus`**: Connection status ['connecting', 'online', 'offline']
+- **`rgbLight`**: RGB LED control ['on', 'off']
 
 ### Complete Attribute List
 
-| Attribute | Type | Description | Diagnostic |
-|-----------|------|-------------|------------|
-| `temperature` | number | Primary temperature reading (°C/°F) | No |
-| `humidity` | number | Relative humidity percentage | No |
-| `networkStatus` | enum | Device connection status | Yes |
-| `rgbLight` | enum | RGB LED control | No |
-| `battery` | number | Battery charge level (0-100%) | No |
-| `batteryVoltage` | number | Battery voltage measurement | No |
-| `boardTemperature` | number | Internal board temperature | Yes |
-| `boardTemperatureOffset` | number | Board temperature calibration offset | Yes |
-| `boardHumidityOffset` | number | Board humidity calibration offset | Yes |
-| `espTemperature` | number | ESP32 chip temperature | Yes |
-| `temperatureProbe` | number | External temperature probe reading | Yes |
-| `tempProbeOffset` | number | Temperature probe calibration offset | Yes |
-| `foodProbe` | number | Food probe temperature reading | Yes |
-| `foodProbeOffset` | number | Food probe calibration offset | Yes |
-| `uptime` | string | Device uptime since last restart | Yes |
-| `rssi` | number | WiFi signal strength (dBm) | Yes |
-| `alarmOutsideTempRange` | enum | Temperature range alarm status | Yes |
-| `notifyOnlyOutsideTempDifference` | enum | Temperature difference notification | Yes |
-| `preventSleep` | enum | Sleep prevention control | Yes |
-| `selectedProbe` | string | Active temperature probe selection | Yes |
-| `sleepDuration` | number | Sleep duration in hours | Yes |
-| `probeTempDifferenceThreshold` | number | Temperature difference threshold | Yes |
-| `minProbeTemp` | number | Minimum probe temperature threshold | Yes |
-| `maxProbeTemp` | number | Maximum probe temperature threshold | Yes |
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `temperature` | number | Primary temperature reading (°C/°F) |
+| `humidity` | number | Relative humidity percentage |
+| `networkStatus` | enum | Device connection status |
+| `rgbLight` | enum | RGB LED control |
+| `battery` | number | Battery charge level (0-100%) |
+| `batteryVoltage` | number | Battery voltage measurement |
+| `boardTemperature` | number | Internal board temperature |
+| `boardTemperatureOffset` | number | Board temperature calibration offset |
+| `boardHumidityOffset` | number | Board humidity calibration offset |
+| `espTemperature` | number | ESP32 chip temperature |
+| `temperatureProbe` | number | External temperature probe reading |
+| `tempProbeOffset` | number | Temperature probe calibration offset |
+| `foodProbe` | number | Food probe temperature reading |
+| `foodProbeOffset` | number | Food probe calibration offset |
+| `uptime` | string | Device uptime since last restart |
+| `rssi` | number | WiFi signal strength (dBm) |
+| `alarmOutsideTempRange` | enum | Temperature range alarm status |
+| `notifyOnlyOutsideTempDifference` | enum | Temperature difference notification |
+| `preventSleep` | enum | Sleep prevention control |
+| `selectedProbe` | string | Active temperature probe selection |
+| `sleepDuration` | number | Sleep duration in hours |
+| `probeTempDifferenceThreshold` | number | Temperature difference threshold |
+| `minProbeTemp` | number | Minimum probe temperature threshold |
+| `maxProbeTemp` | number | Maximum probe temperature threshold |
 
 ### Device Capabilities
 
@@ -66,7 +81,7 @@ The driver implements the following Hubitat capabilities:
 #### setRgbLight
 **Purpose**: Control the RGB LED indicator
 **Parameters**: 
-- `value` (enum): LED state ['off', 'on']
+- `value`: LED state ['off', 'on']
 **Usage**: `setRgbLight('on')` or `setRgbLight('off')`
 
 ### Preferences
@@ -141,10 +156,14 @@ The device supports customizable alerts:
 
 ### Integration Notes
 
-- **ESPHome Compatible**: Full integration with ESPHome firmware
-- **Home Assistant Ready**: Seamless integration with Home Assistant
-- **Local Operation**: No cloud dependency - all processing local
-- **Open Source**: Fully open-source firmware and hardware designs
+- **🏠 Direct Hubitat Connection**: Native ESPHome API integration - no bridges or middleware required
+- **🚫 No Home Assistant Needed**: Connects directly to Hubitat without additional software
+- **🚫 No YAML Configuration**: Simple IP address setup - no complex configuration files
+- **⚡ Plug-and-Play**: Flash firmware, connect to WiFi, add IP address - done!
+- **🔒 Local Operation**: No cloud dependency - all processing stays on your local network
+- **📱 Native Hubitat Features**: Full support for automations, dashboards, and mobile apps
+- **🔧 Zero Maintenance**: Self-managing connection with automatic reconnection
+- **💻 Open Source**: Fully open-source firmware and hardware designs
 
 ### Use Cases
 
@@ -158,7 +177,8 @@ The Apollo Automation TEMP-1B is ideal for:
 - **HVAC Monitoring**: Room temperature and humidity tracking
 - **Server Room Monitoring**: Environmental condition monitoring
 
-### Technical Specifications
+<details>
+<summary><h3>Technical Specifications</h3></summary>
 
 - **Microcontroller**: ESP32 with WiFi and Bluetooth
 - **Power**: CR123A or 16340 rechargeable battery
@@ -170,12 +190,21 @@ The Apollo Automation TEMP-1B is ideal for:
 - **Dimensions**: Compact 3D-printed enclosure
 - **Mounting**: Optional magnetic mount available
 
+</details>
+
+
+[details="Summary"]
+This text will be hidden
+[/details]
+
+
+
 ### Support and Resources
 
 - **Documentation**: Complete setup guides and troubleshooting
 - **Community**: Active Discord community for support
 - **Open Source**: GitHub repository with full source code
 - **Updates**: Regular firmware updates with new features
-- **Customization**: Fully customizable through ESPHome YAML configuration
+- **Simple Setup**: No YAML editing required - driver handles all configuration automatically
 
-This driver provides a comprehensive interface to all TEMP-1B capabilities while maintaining simplicity for everyday use. The diagnostic reporting system allows advanced users to access detailed technical information while keeping the standard interface clean and user-friendly.
+
