@@ -20,16 +20,16 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  *
- *  ver. 1.0.0  2022-06-29 kkossev  - first beta version
+ *  ver. 1.0.0  2022-07-04 kkossev  - first beta version
  * 
- *                         TODO: add driver version
+ *                         TODO: 
 */
 
 import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
 @Field static final String DRIVER_VERSION =  '1.0.0'
-@Field static final String DATE_TIME_STAMP = '07/01/2025 7:52 AM'
+@Field static final String DATE_TIME_STAMP = '07/04/2025 7:55 PM'
 
 metadata {
     definition(
@@ -37,7 +37,7 @@ metadata {
         namespace: 'apollo',
         author: 'Krassimir Kossev',
         singleThreaded: true,
-        importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat-ESPHome-Apollo/refs/heads/main/Apollo%20TEMP-1(B).groovy') {
+        importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat-ESPHome-Apollo/refs/heads/main/Apollo%20TEMP-1B.groovy') {
 
         capability 'Sensor'
         capability 'Refresh'
