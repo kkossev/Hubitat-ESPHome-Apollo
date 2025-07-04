@@ -7,7 +7,7 @@ This driver connects your Apollo Automation TEMP-1B **directly to Hubitat Elevat
 - **🚫 No Home Assistant Needed**: Direct WiFi connection to your Hubitat hub
 - **🚫 No YAML Files to Edit**: Simple IP address configuration - that's it!
 - **🚫 No Cloud Dependencies**: Everything runs locally on your network
-- **⚡ Easy Setup**: Install this driver package from HPM (Hubitat Package Manager), connect the device to your WiFi network, configure the IP address.
+- **⚡ Easy Setup**: Install this driver package from HPM (Hubitat Package Manager), connect the device to your WiFi network, configure the IP address in the driver - done.
 - **🔧 Zero Configuration**: All device features work out-of-the-box
 - **🏠 Native Hubitat Integration**: Full support for Hubitat automations, dashboards, and apps
 
@@ -50,9 +50,9 @@ The Apollo Automation TEMP-1B is ideal for:
 
 ## Apollo Automation TEMP-1B Device Description
 
-| Device Images | Device Features |
+|               |                 |
 |---------------|-----------------|
-| ![TEMP-1B Main Device](https://apolloautomation.com/cdn/shop/files/TEMP-1B_Fridge.png?v=1742996496&width=960) | **Main Device Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Battery-powered operation (CR123A or 16340 rechargeable battery)<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Humidity Range: 0-100% RH with ±2% accuracy<br/>• Onboard AHT20-F temperature and humidity sensor<br/>• RGB LED indicator with customizable colors<br/>• Buzzer for temperature alerts<br/>• 3.5mm jack for external probes<br/>• Up to 6 months battery life with sleep mode |
+| ![TEMP-1B Main Device](https://apolloautomation.com/cdn/shop/files/TEMP-1B_Fridge.png?v=1742996496&width=960) | **Apollo TMP-1(B) Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Battery-powered operation (CR123A or 16340 rechargeable battery)<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Humidity Range: 0-100% RH with ±2% accuracy<br/>• Onboard AHT20-F temperature and humidity sensor<br/>• RGB LED indicator with customizable colors<br/>• Buzzer for temperature alerts<br/>• 3.5mm jack for external probes<br/>• Up to 6 months battery life with sleep mode |
 | **Temperature Probe Features:**<br/>• DS18B20 waterproof temperature sensor<br/>• Available in 20cm (~8in) and 1.5m (~5ft) lengths<br/>• Flat cable design prevents interference with fridge seals<br/>• Submersible and waterproof construction<br/>• Temperature Range: -55°C to +85°C (-67°F to +185°F)<br/>• ±0.5°C accuracy<br/>• Ideal for freezer, fridge, aquarium, and pool monitoring | ![Temperature Probe](https://apolloautomation.com/cdn/shop/files/20241205-123547.jpg?v=1733420196&width=960) | 
 | ![Food Probe](https://apolloautomation.com/cdn/shop/files/TEMP-1_with_Food_Probe.png?v=1742996496&width=960) | **Food Probe Features:**<br/>• 1m (~3ft) stainless steel food-safe probe<br/>• NTC temperature sensor<br/>• Temperature Range: -40°C to +204°C (-40°F to +400°F)<br/>• Food-safe stainless steel construction<br/>• Perfect for grilling, baking, and cooking<br/>• Not dishwasher safe<br/>• Real-time temperature monitoring for perfect cooking results |
 
@@ -151,7 +151,10 @@ These advanced attributes, disabled by default, provide additional insights and 
 | `diagnosticsReporting` | false | Enable reporting of diagnostic attributes |
 | `logWarnEnable` | true | Enable warning and info logging |
 
-### Entity Management
+### More info on this driver
+
+<details>
+<summary>Driver Features & Technical Details</summary>
 
 The driver uses an intelligent entity management system that:
 
@@ -203,17 +206,7 @@ The device supports customizable alerts:
 - **Audible Alerts**: Onboard buzzer for critical notifications
 - **Notification Controls**: Flexible alert configuration options
 
-### Integration Notes
-
-- **🏠 Direct Hubitat Connection**: Native ESPHome API integration - no bridges or middleware required
-- **🚫 No Home Assistant Needed**: Connects directly to Hubitat without additional software
-- **🚫 No YAML Configuration**: Simple IP address setup - no complex configuration files
-- **⚡ Plug-and-Play**: Flash firmware, connect to WiFi, add IP address - done!
-- **🔒 Local Operation**: No cloud dependency - all processing stays on your local network
-- **📱 Native Hubitat Features**: Full support for automations, dashboards, and mobile apps
-- **🔧 Zero Maintenance**: Self-managing connection with automatic reconnection
-- **💻 Open Source**: Fully open-source firmware and hardware designs
-
+</details>
 
 
 
