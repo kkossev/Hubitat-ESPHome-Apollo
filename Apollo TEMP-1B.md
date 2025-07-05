@@ -20,15 +20,15 @@ This driver connects your [Apollo Automation TEMP-1B](https://geni.us/apollo_tem
 
 
 
-Apollo Automation devices come **pre-flashed with ESPHome firmware** - just connect your TEMP-1B to your WiFi network and add the device IP address to this driver. No additional software, bridges, or complex configurations required!
+Apollo Automation devices come **pre-flashed with ESPHome firmware** - just connect your TEMP-1B to your WiFi network and add the device IP address in the Preferences tab of this driver. No additional software, bridges, or complex configurations required.
 
 ------
 
 <details>
-<summary>Technical Specifications</summary>
+<summary><b>Technical Specifications</b> (click to expand)</summary>
 
 - **Microcontroller**: ESP32 with WiFi and Bluetooth
-- **Power**: CR123A or 16340 rechargeable battery
+- **Power**: USB 5V or CR123A or 16340 rechargeable battery
 - **Battery Life**: Up to 6 months with optimized sleep settings
 - **Temperature Accuracy**: ±0.5°C (probes), ±2°C (onboard sensor)
 - **Humidity Accuracy**: ±2% RH
@@ -40,7 +40,7 @@ Apollo Automation devices come **pre-flashed with ESPHome firmware** - just conn
 
 
 <details>
-<summary>Use Cases</summary>
+<summary><b>Use Cases</b> (click to expand)</summary>
 
 The Apollo Automation TEMP-1B is ideal for:
 
@@ -55,7 +55,7 @@ The Apollo Automation TEMP-1B is ideal for:
 </details>
 
 
-## Apollo Automation TEMP-1B Device Description
+### Apollo Automation TEMP-1B
 
 |               |                 |
 |---------------|-----------------|
@@ -68,7 +68,7 @@ The Apollo Automation TEMP-1B is ideal for:
 
 ### Major Attributes
 
-The Apollo Automation TEMP-1B driver provides comprehensive monitoring and control capabilities with dozens of available attributes. For everyday use, the driver displays only the essential attributes by default, keeping your device interface clean and focused. Advanced users can enable additional diagnostic attributes through the preferences when needed.
+The Apollo Automation TEMP-1B driver provides comprehensive monitoring and control capabilities with a dozen of available attributes. For everyday use, the driver displays only the essential attributes by default, keeping your device interface clean and focused. Advanced users can enable additional diagnostic attributes through the preferences when needed.
 
 
 ![Current States](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/current_states.png)
@@ -84,7 +84,7 @@ The Apollo Automation TEMP-1B driver provides comprehensive monitoring and contr
 These advanced attributes, disabled by default, provide additional insights and control for power users seeking enhanced functionality. 
 
 <details>
-<summary>Complete Attribute List</summary>
+<summary><b>Complete Attribute List</b> (click to expand)</summary>
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -161,9 +161,9 @@ These advanced attributes, disabled by default, provide additional insights and 
 ### More info on this driver
 
 <details>
-<summary>Driver Features & Technical Details</summary>
+<summary><b>Driver Features & Technical Details</b> (click to expand)</summary>
 
-The driver uses an intelligent entity management system that:
+The driver is a work in progress. uses an intelligent entity management system that:
 
 - **Automatically discovers** all available ESPHome entities
 - **Maps entities** to appropriate Hubitat attributes
@@ -201,19 +201,22 @@ When diagnostic reporting is enabled:
 
 - **ESP32 Monitoring**: Internal chip temperature and performance
 - **Uptime Tracking**: Device restart and reliability monitoring
-- **Configuration Access**: View and modify advanced device settings
-- **Calibration Values**: Access to all sensor offset parameters
+- **Configuration Access**: View the advanced device settings
+- **Calibration Values**: View all sensor offset parameters
 
 ### Alert System
 
 The device supports customizable alerts:
 
-- **Temperature Range Alarms**: Configurable min/max temperature thresholds
-- **Visual Indicators**: RGB LED with customizable colors
-- **Audible Alerts**: Onboard buzzer for critical notifications
-- **Notification Controls**: Flexible alert configuration options
+- **Temperature Range Alarms**: Configurable min/max temperature thresholds (not implemented in this driver)
+- **Visual Indicators**: RGB LED with customizable colors (only on/off is implemented in the driver)
+- **Audible Alerts**: Onboard buzzer for critical notifications (not tested)
+- **Notification Controls**: Flexible alert configuration options (not implemented in the driver and not tested)
 
 </details>
 
 
+![Temperature Monitoring Graph](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/792096bd1a9266784e274f260e2b5ff3c6c8ccd5/Images/apollo-temp-1(b)-graph.png)
+
+(Generated using the HE inbuilt [webCoRE](https://community.hubitat.com/c/comappsanddrivers/webcore/104) Graphs).
 
