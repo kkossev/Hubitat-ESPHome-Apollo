@@ -12,7 +12,7 @@
      "id":"9df87cc8-f25f-4437-969c-e225c338dd30",
      "name":"ESPHome Apollo Automation Drivers",
      "namespace":"apollo",
-     "location":"https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/ESPHomeApolloAutomationDrivers.zip",
+     "location":"https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/ESPHomeApolloAutomationDrivers.zip",
      "required":true
   }
   ]
