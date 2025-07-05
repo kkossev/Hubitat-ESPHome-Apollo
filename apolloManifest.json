@@ -1,0 +1,19 @@
+{
+ "packageName":"ESPHome Apollo Automation Drivers",
+ "author":"Krassimir Kossev",
+ "version":"1.0.0",
+ "minimumHEVersion":"2.3.8.100",
+ "dateReleased":"2025-07-05",
+ "releaseNotes":"1.0.0 - first Beta version",
+ "documentationLink":"https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/README.md",
+ "communityLink":"https://community.hubitat.com/t/esphome-hubitat/68341",
+ "bundles": [
+  {
+     "id":"9df87cc8-f25f-4437-969c-e225c338dd30",
+     "name":"ESPHome Apollo Automation Drivers",
+     "namespace":"apollo",
+     "location":"https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/ESPHomeApolloAutomationDrivers.zip",
+     "required":true
+  }
+  ]
+}
