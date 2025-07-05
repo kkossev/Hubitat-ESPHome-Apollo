@@ -1,8 +1,8 @@
-# Apollo Automation TEMP-1B Driver for Hubitat Elevation
+## Apollo Automation TEMP-1B Driver for Hubitat Elevation
 
-## ✨ Direct Hubitat Integration - No Home Assistant Required!
+This driver connects your [Apollo Automation TEMP-1B](https://geni.us/apollo_temp1) sensor **directly to your HE hub** thanks to the great work done by Jonathan Bradshaw (@jonathanb) - the [ESPHome Hubitat Toolkit](https://github.com/bradsjm/hubitat-public/tree/main/ESPHome).
 
-This driver connects your [Apollo Automation TEMP-1B](https://geni.us/apollo_temp1) **directly to Hubitat Elevation** thanks to the great work done by Jonathan Bradshaw (@jonathanb) - https://github.com/bradsjm/hubitat-public/tree/main/ESPHome 
+The driver can be installed using the community [Hubitat Package Manager](https://community.hubitat.com/t/release-hubitat-package-manager-hpm-hubitatcommunity/94471/1) app or manually as a Bundle archive from [GitHub](https://github.com/kkossev/Hubitat-ESPHome-Apollo).
 
 - **🚫 No Home Assistant Needed**: Direct WiFi connection to your Hubitat hub
 - **🚫 No YAML Files to Edit**: Simple IP address configuration - that's it!
@@ -11,16 +11,6 @@ This driver connects your [Apollo Automation TEMP-1B](https://geni.us/apollo_tem
 - **🔧 Zero Configuration**: All device features work out-of-the-box
 - **🏠 Native Hubitat Integration**: Full support for Hubitat automations, dashboards, and apps
 
-
------
-
-[Apollo Automation](https://geni.us/apolloautomation) is a local tech startup building advanced hardware and software in Lexington, KY. 
-
-![Made for ESPHome](https://esphome.io/_images/made-for-esphome-black-on-white.svg)
-
-
-
-Apollo Automation devices come **pre-flashed with ESPHome firmware** - just connect your TEMP-1B to your WiFi network and add the device IP address in the Preferences tab of this driver. No additional software, bridges, or complex configurations required.
 
 ------
 
@@ -62,6 +52,17 @@ The Apollo Automation TEMP-1B is ideal for:
 | [![TEMP-1B Main Device](https://apolloautomation.com/cdn/shop/files/TEMP-1B_Fridge.png?v=1742996496&width=960)](https://geni.us/apollo_temp1) | **Apollo TMP-1(B) Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Battery-powered operation (CR123A or 16340 rechargeable battery)<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Humidity Range: 0-100% RH with ±2% accuracy<br/>• Onboard AHT20-F temperature and humidity sensor<br/>• RGB LED indicator with customizable colors<br/>• Buzzer for temperature alerts<br/>• 3.5mm jack for external probes<br/>• Up to 6 months battery life with sleep mode |
 | **Temperature Probe Features:**<br/>• DS18B20 waterproof temperature sensor<br/>• Available in 20cm (~8in) and 1.5m (~5ft) lengths<br/>• Flat cable design prevents interference with fridge seals<br/>• Submersible and waterproof construction<br/>• Temperature Range: -55°C to +85°C (-67°F to +185°F)<br/>• ±0.5°C accuracy<br/>• Ideal for freezer, fridge, aquarium, and pool monitoring | [![Temperature Probe](https://apolloautomation.com/cdn/shop/files/20241205-123547.jpg?v=1733420196&width=960)](https://geni.us/apollo-long-temp-probe) | 
 | [![Food Probe](https://apolloautomation.com/cdn/shop/files/TEMP-1_with_Food_Probe.png?v=1742996496&width=960)](https://geni.us/apollo-food-probe) | **Food Probe Features:**<br/>• 1m (~3ft) stainless steel food-safe probe<br/>• NTC temperature sensor<br/>• Temperature Range: -40°C to +204°C (-40°F to +400°F)<br/>• Food-safe stainless steel construction<br/>• Perfect for grilling, baking, and cooking<br/>• Not dishwasher safe<br/>• Real-time temperature monitoring for perfect cooking results |
+
+
+-----
+
+[Apollo Automation](https://geni.us/apolloautomation) is a local tech startup building advanced hardware and software in Lexington, KY. 
+
+![Made for ESPHome](https://esphome.io/_images/made-for-esphome-black-on-white.svg)
+
+
+
+✨Apollo Automation devices come **pre-flashed with ESPHome firmware** - just connect your TEMP-1B to your WiFi network and add the device IP address in the Preferences tab of this driver. No additional software, bridges, or complex configurations required.
 
 ## Driver Description
 
@@ -123,19 +124,17 @@ These advanced attributes, disabled by default, provide additional insights and 
 
 ![Commands](https://github.com/kkossev/Hubitat-ESPHome-Apollo/raw/main/Images/apollo-temp1(b)-hubitat-commands.png)
 
-#### initialize
-**Purpose**: Establishes connection to the device and starts monitoring
-**Usage**: Automatically called during device setup or manually from device commands
+#### initialize() 
+- Establishes connection to the device and starts monitoring.  Automatically called during device setup or manually from device commands.
 
-#### refresh
-**Purpose**: Refreshes device information and clears cached data
-**Usage**: Manually refresh device status and request updated information from the device
+#### refresh()
+- Refreshes device information and clears cached data. Manually refresh device status and request updated information from the device.
 
-#### setRgbLight
-**Purpose**: Control the RGB LED indicator
-**Parameters**: 
-- `value`: LED state ['off', 'on']
-**Usage**: `setRgbLight('on')` or `setRgbLight('off')`
+#### setRgbLight()
+- **Purpose**: Control the RGB LED indicator
+- **Parameters**: 
+  - `value`: LED state ['off', 'on']
+- **Usage**: `setRgbLight('on')` or `setRgbLight('off')`
 
 
 ### Preferences
