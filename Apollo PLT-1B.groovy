@@ -20,7 +20,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  *
- *  ver. 1.0.0  2025-07-01 kkossev  - first beta version
+ *  ver. 1.0.0  2025-07-07 kkossev  - first beta version
  * 
  *                         TODO: add driver version
 */
@@ -29,7 +29,7 @@ import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
 @Field static final String DRIVER_VERSION =  '1.0.0'
-@Field static final String DATE_TIME_STAMP = '07/01/2025 9:44 PM'
+@Field static final String DATE_TIME_STAMP = '07/07/2025 10:13 PM'
 
 metadata {
     definition(
@@ -71,21 +71,21 @@ metadata {
         attribute 'firmwareUpdate', 'string'          // Firmware update status
 
         command 'setRgbLight', [[name:'LED control', type: 'ENUM', constraints: ['off', 'on']]]
-        command 'setAccessoryPower', [[name:'Accessory Power control', type: 'ENUM', constraints: ['off', 'on']]]
+        //command 'setAccessoryPower', [[name:'Accessory Power control', type: 'ENUM', constraints: ['off', 'on']]]
     }
 
     preferences {
         input name: 'logEnable', type: 'bool', title: 'Enable Debug Logging', required: false, defaultValue: false    // if enabled the library will log debug details
         input name: 'txtEnable', type: 'bool', title: 'Enable descriptionText logging', required: false, defaultValue: true
         input name: 'ipAddress', type: 'text', title: 'Device IP Address', required: true    // required setting for API library
-        input name: 'temperaturePreference', type: 'enum', title: 'Primary Temperature Display', required: false, options: ['Air', 'Soil'], defaultValue: 'Air', description: 'Select which sensor to use for main temperature attribute (applies to both devices)'    
-        input name: 'airTemperatureOffset', type: 'decimal', title: 'Air Temperature Offset', required: false, defaultValue: 0.0, description: 'Temperature calibration offset in degrees (positive or negative)'
-        input name: 'airHumidityOffset', type: 'decimal', title: 'Air Humidity Offset', required: false, defaultValue: 0.0, description: 'Humidity calibration offset in percent (positive or negative)'
+        input name: 'temperaturePreference', type: 'enum', title: 'Temperature Sensor Selection', required: false, options: ['Air', 'Soil'], defaultValue: 'Air', description: 'Select which sensor to use for main temperature attribute (applies to both PLT-1 and PLT-1B devices)'    
+        input name: 'airTemperatureOffset', type: 'decimal', title: 'Air Temperature Offset (°)', required: false, defaultValue: 0.0, range: '-50..50', description: 'Calibration offset for air temperature sensor'
+        input name: 'airHumidityOffset', type: 'decimal', title: 'Air Humidity Offset (%)', required: false, defaultValue: 0.0, range: '-50..50', description: 'Calibration offset for air humidity sensor'
         input name: 'advancedOptions', type: 'bool', title: '<b>Advanced Options</b>', description: 'Flip to see or hide the advanced options', defaultValue: false
         if (advancedOptions == true) {
             input name: 'password', type: 'text', title: 'Device Password <i>(if required)</i>', required: false     // optional setting for API library
             input name: 'diagnosticsReporting', type: 'bool', title: 'Enable Diagnostic Attributes', required: false, defaultValue: false, description: 'Enable reporting of technical diagnostic attributes (advanced users only)'
-            input name: 'logWarnEnable', type: 'bool', title: 'Enable warning logging', required: false, defaultValue: true, description: '<i>Enables API Library warnings and info logging.</i>'
+            input name: 'logWarnEnable', type: 'bool', title: 'Enable warning logging', required: false, defaultValue: false, description: '<i>Enables API Library warnings and info logging.</i>'
         }
     }
 }
@@ -737,10 +737,10 @@ private void handleSelectSensorState(Map message) {
         }
         
         // Sync the preference setting with ESPHome selection (avoid loops)
-        if (settings.selectedSensor != selectedSensor) {
-            device.updateSetting('selectedSensor', selectedSensor)
+        if (settings.temperaturePreference != selectedSensor) {
+            device.updateSetting('temperaturePreference', selectedSensor)
             if (txtEnable && shouldReportDiagnostic('select_sensor')) { 
-                log.info "Selected sensor preference synced from ESPHome to ${selectedSensor}" 
+                log.info "Temperature preference synced from ESPHome to ${selectedSensor}" 
             }
         }
         
