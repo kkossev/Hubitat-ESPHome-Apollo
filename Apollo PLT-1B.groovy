@@ -29,7 +29,7 @@ import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
 @Field static final String DRIVER_VERSION =  '1.0.0'
-@Field static final String DATE_TIME_STAMP = '07/07/2025 10:13 PM'
+@Field static final String DATE_TIME_STAMP = '07/08/2025 6:09 PM'
 
 metadata {
     definition(
@@ -809,23 +809,23 @@ private void handleIlluminanceState(Map message, Map entity) {
     }
     
     Float illuminance = message.state as Float
-    String illuminanceStr = String.format("%.1f", illuminance)
+    Integer illuminanceInt = Math.round(illuminance) as Integer
     String attributeName = entityInfo.attr
     String description = entityInfo.description
-    String unit = "lux"  // Standard unit for illuminance
+    String unit = "lx"  // Standard unit for illuminance
     
     // Get the previous illuminance value from current state
     def currentIlluminanceState = device.currentState(attributeName)
     String previousValue = currentIlluminanceState?.value
     
     // Only send event and log if the value has changed
-    if (previousValue != illuminanceStr) {
+    if (previousValue != illuminanceInt.toString()) {
         // Always send illuminance event (ltr390_light is isDiag: false)
-        sendEvent(name: attributeName, value: illuminanceStr, unit: unit, descriptionText: "${description} is ${illuminanceStr} ${unit}")
+        sendEvent(name: attributeName, value: illuminanceInt, unit: unit, descriptionText: "${description} is ${illuminanceInt} ${unit}")
         
         // Always log illuminance (it's not a diagnostic attribute)
         if (txtEnable) { 
-            log.info "${description} is ${illuminanceStr} ${unit}" 
+            log.info "${description} is ${illuminanceInt} ${unit}" 
         }
     }
 }
