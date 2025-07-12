@@ -373,3 +373,4 @@ void test() {
 
 // Put this line at the end of the driver to include the ESPHome API library helper
 #include esphome.espHomeApiHelperKKmod
+#include apollo.espHomeApolloLibraryCommon

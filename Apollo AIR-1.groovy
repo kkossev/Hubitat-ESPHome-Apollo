@@ -20,7 +20,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  *
- *  ver. 1.0.0  2025-07-07 kkossev  - first beta version
+ *  ver. 1.0.0  2025-07-12 kkossev  - first beta version based on PLT-1B driver, using the common apollo library.
  * 
  *                         TODO: add driver version
 */
@@ -29,59 +29,87 @@ import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
 @Field static final String DRIVER_VERSION =  '1.0.0'
-@Field static final String DATE_TIME_STAMP = '07/12/2025 6:26 PM'
+@Field static final String DATE_TIME_STAMP = '07/12/2025 10:54 PM'
 
 metadata {
     definition(
-        name: 'ESPHome Apollo PLT-1(B)',
+        name: 'ESPHome Apollo AIR-1',
         namespace: 'apollo',
         author: 'Krassimir Kossev',
         singleThreaded: true,
-        importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat-ESPHome-Apollo/refs/heads/main/Apollo%20PLT-1B.groovy') {
+        importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat-ESPHome-Apollo/refs/heads/main/Apollo%20AIR-1.groovy') {
 
+        capability 'AirQuality'
+        capability 'CarbonDioxideMeasurement'
+        capability 'RelativeHumidityMeasurement'
+        capability 'TemperatureMeasurement'
+        capability 'PressureMeasurement'
         capability 'Sensor'
         capability 'Refresh'
-        capability 'RelativeHumidityMeasurement'
         capability 'SignalStrength'
-        capability 'TemperatureMeasurement'
-        capability 'IlluminanceMeasurement'
-        capability 'UltravioletIndex'
-        capability 'Battery'
         capability 'Initialize'
 
         // attribute populated by ESPHome API Library automatically
         attribute 'networkStatus', 'enum', [ 'connecting', 'online', 'offline' ]
         attribute 'online', 'enum', ['true', 'false']        // Device online status from ESPHome
-        attribute 'airTemperature', 'number'          // AHT20-F air temperature sensor
-        attribute 'airTemperatureOffset', 'number'    // Air temperature calibration offset
-        attribute 'airHumidityOffset', 'number'       // Air humidity calibration offset
-        attribute 'espTemperature', 'number'
-        attribute 'soilMoisture', 'number'
-        attribute 'soilTemperature', 'number'         // Optional DS18B20 soil temperature probe
-        attribute 'soilAdc', 'number'                 // Soil ADC voltage measurement
-        attribute 'uptime', 'number'
-        attribute 'rgbLight', 'enum', ['on', 'off'] 
-        attribute 'batteryVoltage', 'number'          // Battery voltage measurement
-        attribute 'accessoryPower', 'enum', ['on', 'off']  // Control for sensor power (PLT-1 only)
-        attribute 'preventSleep', 'enum', ['on', 'off']
-        attribute 'sleepAfterConnecting', 'enum', ['on', 'off']  // PLT-1 only
-        attribute 'sleepDuration', 'number'
-        attribute 'selectedSensor', 'string'          // PLT-1 only
-        attribute 'waterVoltage100', 'number'         // 100% water voltage calibration
-        attribute 'dryVoltage', 'number'              // Dry soil voltage calibration
-        attribute 'firmwareUpdate', 'string'          // Firmware update status
+        
+        // Primary air quality sensors
+        attribute 'sen55Temperature', 'number'          // SEN55 temperature sensor
+        attribute 'sen55Humidity', 'number'             // SEN55 humidity sensor  
+        attribute 'sen55Voc', 'number'                  // SEN55 VOC index
+        attribute 'sen55Nox', 'number'                  // SEN55 NOX index
+        attribute 'vocQuality', 'string'                // VOC quality text rating
+        
+        // Particulate matter sensors
+        attribute 'pm1', 'number'                       // PM <1µm Weight concentration
+        attribute 'pm25', 'number'                      // PM <2.5µm Weight concentration
+        attribute 'pm4', 'number'                       // PM <4µm Weight concentration
+        attribute 'pm10', 'number'                      // PM <10µm Weight concentration
+        
+        // Detailed PM size ranges (disabled by default in ESPHome)
+        attribute 'pm03To1', 'number'                   // PM 0.3 To 1 µm
+        attribute 'pm1To25', 'number'                   // PM 1 To 2.5 µm
+        attribute 'pm25To4', 'number'                   // PM 2.5 To 4 µm
+        attribute 'pm4To10', 'number'                   // PM 4 To 10 µm
+        
+        // Gas sensors (ENS160)
+        attribute 'ammonia', 'number'                   // Ammonia (NH₃)
+        attribute 'carbonMonoxide', 'number'            // Carbon Monoxide (CO)
+        attribute 'ethanol', 'number'                   // Ethanol (C₂H₅OH)
+        attribute 'hydrogen', 'number'                  // Hydrogen (H₂)
+        attribute 'methane', 'number'                   // Methane (CH₄)
+        attribute 'nitrogenDioxide', 'number'           // Nitrogen Dioxide (NO₂)
+        
+        // Environmental sensors
+        attribute 'dps310Pressure', 'number'           // DPS310 pressure sensor
+        attribute 'espTemperature', 'number'           // ESP32 internal temperature
+        
+        // Configuration and calibration
+        attribute 'sen55TemperatureOffset', 'number'   // SEN55 temperature calibration offset
+        attribute 'sen55HumidityOffset', 'number'      // SEN55 humidity calibration offset
+        attribute 'sleepDuration', 'number'            // Sleep duration setting
+        
+        // Controls and status
+        attribute 'rgbLight', 'enum', ['on', 'off']    // RGB LED control
+        attribute 'preventSleep', 'enum', ['on', 'off'] // Prevent sleep mode
+        attribute 'uptime', 'string'                   // Device uptime
+        
+        // Diagnostic attributes
+        attribute 'rssi', 'number'                     // WiFi signal strength
 
         command 'setRgbLight', [[name:'LED control', type: 'ENUM', constraints: ['off', 'on']]]
-        //command 'setAccessoryPower', [[name:'Accessory Power control', type: 'ENUM', constraints: ['off', 'on']]]
+        command 'calibrateScd40', [[name:'Calibrate CO2 to 420ppm', type: 'ENUM', constraints: ['calibrate']]]
+        command 'cleanSen55', [[name:'Clean SEN55 sensor', type: 'ENUM', constraints: ['clean']]]
+        command 'espReboot', [[name:'Reboot ESP32', type: 'ENUM', constraints: ['reboot']]]
     }
 
     preferences {
         input name: 'logEnable', type: 'bool', title: 'Enable Debug Logging', required: false, defaultValue: false    // if enabled the library will log debug details
         input name: 'txtEnable', type: 'bool', title: 'Enable descriptionText logging', required: false, defaultValue: true
         input name: 'ipAddress', type: 'text', title: 'Device IP Address', required: true    // required setting for API library
-        input name: 'temperaturePreference', type: 'enum', title: 'Temperature Sensor Selection', required: false, options: ['Air', 'Soil'], defaultValue: 'Air', description: 'Select which sensor to use for main temperature attribute (applies to both PLT-1 and PLT-1B devices)'    
-        input name: 'airTemperatureOffset', type: 'decimal', title: 'Air Temperature Offset (°)', required: false, defaultValue: 0.0, range: '-50..50', description: 'Calibration offset for air temperature sensor'
-        input name: 'airHumidityOffset', type: 'decimal', title: 'Air Humidity Offset (%)', required: false, defaultValue: 0.0, range: '-50..50', description: 'Calibration offset for air humidity sensor'
+        input name: 'sen55TemperatureOffset', type: 'decimal', title: 'SEN55 Temperature Offset (°)', required: false, defaultValue: 0.0, range: '-70..70', description: 'Calibration offset for SEN55 temperature sensor'
+        input name: 'sen55HumidityOffset', type: 'decimal', title: 'SEN55 Humidity Offset (%)', required: false, defaultValue: 0.0, range: '-70..70', description: 'Calibration offset for SEN55 humidity sensor'
+        input name: 'sleepDuration', type: 'number', title: 'Sleep Duration (minutes)', required: false, defaultValue: 5, range: '0..800', description: 'Time between measurements when in sleep mode'
         input name: 'advancedOptions', type: 'bool', title: '<b>Advanced Options</b>', description: 'Flip to see or hide the advanced options', defaultValue: false
         if (advancedOptions == true) {
             input name: 'password', type: 'text', title: 'Device Password <i>(if required)</i>', required: false     // optional setting for API library
@@ -92,37 +120,49 @@ metadata {
 }
 
 @Field static final Map<String, Map<String, Object>> ALL_ENTITIES = [
-    // PLT-1B specific entities (based on actual device data)
-    '100__water_voltage':                  [attr: 'waterVoltage100',                isDiag: true,  type: 'config',      description: '100% water voltage calibration threshold'],
-    'air_humidity_offset':                 [attr: 'airHumidityOffset',              isDiag: true,  type: 'offset',      description: 'Air humidity calibration offset'],
-    'air_temperature_offset':              [attr: 'airTemperatureOffset',           isDiag: true,  type: 'offset',      description: 'Air temperature calibration offset'],
-    'soil_adc':                            [attr: 'soilAdc',                        isDiag: true,  type: 'sensor',      description: 'Soil ADC voltage measurement'],
+    // Primary sensors (always enabled)
+    'ammonia':                             [attr: 'ammonia',                        isDiag: false, type: 'sensor',      description: 'Ammonia (NH₃) gas sensor'],
+    'carbon_monoxide':                     [attr: 'carbonMonoxide',                 isDiag: false, type: 'sensor',      description: 'Carbon Monoxide (CO) gas sensor'],
+    'co2':                                 [attr: 'carbonDioxide',                  isDiag: false, type: 'sensor',      description: 'Carbon Dioxide (CO₂) sensor (SCD40)'],
+    'dps310_pressure':                     [attr: 'dps310Pressure',                 isDiag: true,  type: 'pressure',    description: 'DPS310 air pressure sensor'],
+    'ethanol':                             [attr: 'ethanol',                        isDiag: false, type: 'sensor',      description: 'Ethanol (C₂H₅OH) gas sensor'],
+    'hydrogen':                            [attr: 'hydrogen',                       isDiag: false, type: 'sensor',      description: 'Hydrogen (H₂) gas sensor'],
+    'methane':                             [attr: 'methane',                        isDiag: false, type: 'sensor',      description: 'Methane (CH₄) gas sensor'],
+    'nitrogen_dioxide':                    [attr: 'nitrogenDioxide',                isDiag: false, type: 'sensor',      description: 'Nitrogen Dioxide (NO₂) gas sensor'],
+    'pm__1_m_weight_concentration':        [attr: 'pm1',                            isDiag: false, type: 'sensor',      description: 'PM <1µm weight concentration'],
+    'pm__2_5_m_weight_concentration':      [attr: 'pm25',                           isDiag: false, type: 'sensor',      description: 'PM <2.5µm weight concentration'],
+    'pm__4_m_weight_concentration':        [attr: 'pm4',                            isDiag: false, type: 'sensor',      description: 'PM <4µm weight concentration'],
+    'pm__10_m_weight_concentration':       [attr: 'pm10',                           isDiag: false, type: 'sensor',      description: 'PM <10µm weight concentration'],
+    'sen55_humidity':                      [attr: 'sen55Humidity',                  isDiag: true,  type: 'sensor',      description: 'SEN55 humidity sensor'],
+    'sen55_nox':                           [attr: 'sen55Nox',                       isDiag: false, type: 'sensor',      description: 'SEN55 NOX index'],
+    'sen55_temperature':                   [attr: 'sen55Temperature',               isDiag: true,  type: 'temperature', description: 'SEN55 temperature sensor'],
+    'sen55_voc':                           [attr: 'sen55Voc',                       isDiag: false, type: 'sensor',      description: 'SEN55 VOC index'],
+    'voc_quality':                         [attr: 'vocQuality',                     isDiag: false, type: 'text',        description: 'VOC quality rating'],
     
-    // Common entities (present in both PLT-1 and PLT-1B)
-    'air_humidity':                        [attr: 'humidity',                       isDiag: false, type: 'sensor',      description: 'Air humidity sensor (AHT20-F)'],
-    'air_temperature':                     [attr: 'airTemperature',                 isDiag: false, type: 'temperature', description: 'Air temperature sensor (AHT20-F)'],
-    'dry_voltage':                         [attr: 'dryVoltage',                     isDiag: true,  type: 'config',      description: 'Dry soil voltage calibration threshold'],
-    'esp_reboot':                          [attr: 'espReboot',                      isDiag: true,  type: 'button',      description: 'ESP device reboot button'],
-    'esp_temperature':                     [attr: 'espTemperature',                 isDiag: true,  type: 'temperature', description: 'ESP32 chip internal temperature'],
-    'factory_reset_esp':                   [attr: 'factoryResetEsp',                isDiag: true,  type: 'button',      description: 'Factory reset ESP device button'],
-    'firmware_update':                     [attr: 'firmwareUpdate',                 isDiag: true,  type: 'status',      description: 'Firmware update status'],
-    'ltr390_light':                        [attr: 'illuminance',                    isDiag: false, type: 'sensor',      description: 'LTR390 ambient light sensor'],
-    'ltr390_uv_index':                     [attr: 'ultravioletIndex',               isDiag: false, type: 'sensor',      description: 'LTR390 UV index sensor'],
-    'online':                              [attr: 'online',                         isDiag: true,  type: 'status',      description: 'Device online status'],
-    'prevent_sleep':                       [attr: 'preventSleep',                   isDiag: true,  type: 'switch',      description: 'Prevent device sleep mode switch'],
+    // Detailed PM sensors (disabled by default in ESPHome)
+    'pm_0_3_to_1__m':                      [attr: 'pm03To1',                        isDiag: true,  type: 'sensor',      description: 'PM 0.3 to 1 µm concentration'],
+    'pm_1_to_2_5__m':                      [attr: 'pm1To25',                        isDiag: true,  type: 'sensor',      description: 'PM 1 to 2.5 µm concentration'],
+    'pm_2_5_to_4__m':                      [attr: 'pm25To4',                        isDiag: true,  type: 'sensor',      description: 'PM 2.5 to 4 µm concentration'],
+    'pm_4_to_10__m':                       [attr: 'pm4To10',                        isDiag: true,  type: 'sensor',      description: 'PM 4 to 10 µm concentration'],
+    
+    // Controls
     'rgb_light':                           [attr: 'rgbLight',                       isDiag: false, type: 'light',       description: 'RGB status light control'],
-    'rssi':                                [attr: 'rssi',                           isDiag: true,  type: 'signal',      description: 'WiFi signal strength indicator'],
-    'sleep_duration':                      [attr: 'sleepDuration',                  isDiag: true,  type: 'config',      description: 'Device sleep duration between measurements'],
-    'soil_moisture':                       [attr: 'soilMoisture',                   isDiag: false, type: 'sensor',      description: 'Soil moisture sensor'],
-    'soil_temperature':                    [attr: 'soilTemperature',                isDiag: false, type: 'temperature', description: 'Soil temperature sensor (DS18B20 probe)'],
-    'uptime':                              [attr: 'uptime',                         isDiag: true,  type: 'status',      description: 'Device uptime since last restart'],
     
-    // PLT-1 specific entities (may be present in some devices)
-    'accessory_power':                     [attr: 'accessoryPower',                 isDiag: false, type: 'switch',      description: 'Accessory power control switch'],
-    'battery_level':                       [attr: 'battery',                        isDiag: false, type: 'sensor',      description: 'Battery charge level percentage'],
-    'battery_voltage':                     [attr: 'batteryVoltage',                 isDiag: false, type: 'sensor',      description: 'Battery voltage measurement'],
-    'select_sensor':                       [attr: 'selectedSensor',                 isDiag: true,  type: 'selector',    description: 'Active temperature sensor selection'],
-    'sleep_after_connecting':              [attr: 'sleepAfterConnecting',           isDiag: true,  type: 'switch',      description: 'Sleep after connecting switch']
+    // Configuration entities
+    'calibrate_scd40_to_420ppm':           [attr: 'calibrateScd40',                 isDiag: true,  type: 'button',      description: 'Calibrate SCD40 CO₂ to 420ppm'],
+    'clean_sen55':                         [attr: 'cleanSen55',                     isDiag: true,  type: 'button',      description: 'Clean SEN55 sensor'],
+    'esp_reboot':                          [attr: 'espReboot',                      isDiag: true,  type: 'button',      description: 'ESP device reboot button'],
+    'factory_reset_esp':                   [attr: 'factoryResetEsp',                isDiag: true,  type: 'button',      description: 'Factory reset ESP device button'],
+    'prevent_sleep':                       [attr: 'preventSleep',                   isDiag: true,  type: 'switch',      description: 'Prevent device sleep mode switch'],
+    'sen55_humidity_offset':               [attr: 'sen55HumidityOffset',            isDiag: true,  type: 'offset',      description: 'SEN55 humidity calibration offset'],
+    'sen55_temperature_offset':            [attr: 'sen55TemperatureOffset',         isDiag: true,  type: 'offset',      description: 'SEN55 temperature calibration offset'],
+    'sleep_duration':                      [attr: 'sleepDuration',                  isDiag: true,  type: 'config',      description: 'Device sleep duration between measurements'],
+    
+    // Diagnostic entities
+    'esp_temperature':                     [attr: 'espTemperature',                 isDiag: true,  type: 'temperature', description: 'ESP32 chip internal temperature'],
+    'online':                              [attr: 'online',                         isDiag: true,  type: 'status',      description: 'Device online status'],
+    'rssi':                                [attr: 'rssi',                           isDiag: true,  type: 'signal',      description: 'WiFi signal strength indicator'],
+    'uptime':                              [attr: 'uptime',                         isDiag: true,  type: 'status',      description: 'Device uptime since last restart']
 ]
 
 /**
@@ -204,6 +244,8 @@ private boolean shouldReportDiagnostic(String objectId) {
     return false
 }
 
+// Lifecycle methods
+
 public void updated() {
     checkDriverVersion(DRIVER_VERSION, DATE_TIME_STAMP, _DEBUG)
     log.info "${device} driver configuration updated"
@@ -212,103 +254,103 @@ public void updated() {
     if (settings.diagnosticsReporting == false) {
         ALL_ENTITIES.each { entityId, entityInfo ->
             def attributeName = entityInfo.attr
-            // Skip networkStatus as it's important for connection status
+            // Skip networkStatus and online as they're important for connection status
             if (attributeName != 'networkStatus' && entityInfo.isDiag == true) {
                 device.deleteCurrentState(attributeName)
             }
         }
     }
     
-    // Sync temperature preference with ESPHome select_sensor entity (PLT-1 only)
-    if (settings.temperaturePreference) {
-        syncTemperatureSelection()
+    // Sync SEN55 temperature offset preference with ESPHome
+    if (settings.sen55TemperatureOffset != null) {
+        syncSen55TemperatureOffset()
     }
     
-    // Sync air humidity offset preference with ESPHome (PLT-1B has air_humidity_offset entity)
-    if (settings.airHumidityOffset != null) {
-        syncAirHumidityOffset()
+    // Sync SEN55 humidity offset preference with ESPHome
+    if (settings.sen55HumidityOffset != null) {
+        syncSen55HumidityOffset()
     }
     
-    // Sync air temperature offset preference with ESPHome (PLT-1B has air_temperature_offset entity)
-    if (settings.airTemperatureOffset != null) {
-        syncAirTemperatureOffset()
+    // Sync sleep duration preference with ESPHome
+    if (settings.sleepDuration != null) {
+        syncSleepDuration()
     }
     
     initialize()
 }
 
-private void syncTemperatureSelection() {
-    // Find the select_sensor entity key
-    def selectKey = null
-    state.entities?.each { key, entity ->
-        if (entity.objectId == 'select_sensor') {
-            selectKey = key as Long
-        }
-    }
-    
-    if (selectKey == null) {
-        if (logEnable) { 
-            log.warn "Select sensor entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
-        }
-        return
-    }
-    
-    String selectedSensor = settings.temperaturePreference
-    if (txtEnable) { log.info "${device} syncing selected sensor to ${selectedSensor} (key: ${selectKey})" }
-    
-    // Send the selection to ESPHome
-    espHomeSelectCommand(key: selectKey, state: selectedSensor)
-}
-
-private void syncAirHumidityOffset() {
-    // Find the air_humidity_offset entity key (if it exists)
+private void syncSen55TemperatureOffset() {
+    // Find the sen55_temperature_offset entity key
     def offsetKey = null
     state.entities?.each { key, entity ->
-        if (entity.objectId == 'air_humidity_offset') {
+        if (entity.objectId == 'sen55_temperature_offset') {
             offsetKey = key as Long
         }
     }
     
     if (offsetKey == null) {
         if (logEnable) { 
-            log.warn "Air humidity offset entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
+            log.warn "SEN55 temperature offset entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
         }
         return
     }
     
-    Float offset = settings.airHumidityOffset as Float
-    if (txtEnable) { log.info "${device} syncing air humidity offset to ${offset}% (key: ${offsetKey})" }
+    Float offset = settings.sen55TemperatureOffset as Float
+    if (txtEnable) { log.info "${device} syncing SEN55 temperature offset to ${offset}° (key: ${offsetKey})" }
     
     // Send the offset to ESPHome
     espHomeNumberCommand(key: offsetKey, state: offset)
 }
 
-private void syncAirTemperatureOffset() {
-    // Find the air_temperature_offset entity key (if it exists)
+private void syncSen55HumidityOffset() {
+    // Find the sen55_humidity_offset entity key
     def offsetKey = null
     state.entities?.each { key, entity ->
-        if (entity.objectId == 'air_temperature_offset') {
+        if (entity.objectId == 'sen55_humidity_offset') {
             offsetKey = key as Long
         }
     }
     
     if (offsetKey == null) {
         if (logEnable) { 
-            log.warn "Air temperature offset entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
+            log.warn "SEN55 humidity offset entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
         }
         return
     }
     
-    Float offset = settings.airTemperatureOffset as Float
-    if (txtEnable) { log.info "${device} syncing air temperature offset to ${offset}° (key: ${offsetKey})" }
+    Float offset = settings.sen55HumidityOffset as Float
+    if (txtEnable) { log.info "${device} syncing SEN55 humidity offset to ${offset}% (key: ${offsetKey})" }
     
     // Send the offset to ESPHome
     espHomeNumberCommand(key: offsetKey, state: offset)
+}
+
+private void syncSleepDuration() {
+    // Find the sleep_duration entity key
+    def durationKey = null
+    state.entities?.each { key, entity ->
+        if (entity.objectId == 'sleep_duration') {
+            durationKey = key as Long
+        }
+    }
+    
+    if (durationKey == null) {
+        if (logEnable) { 
+            log.warn "Sleep duration entity not found - available entities: ${state.entities?.values()?.collect { it.objectId }}" 
+        }
+        return
+    }
+    
+    Integer duration = settings.sleepDuration as Integer
+    if (txtEnable) { log.info "${device} syncing sleep duration to ${duration} minutes (key: ${durationKey})" }
+    
+    // Send the duration to ESPHome
+    espHomeNumberCommand(key: durationKey, state: duration)
 }
 
 // the parse method is invoked by the API library when messages are received
 void parse(final Map message) {
-    if (logEnable) { log.debug "parsePLT: ${message}" }
+    if (logEnable) { log.debug "parseAIR: ${message}" }
 
     switch (message.type) {
         case 'device':
@@ -388,8 +430,14 @@ void storeSpecificEntityKeys(Map message, Long key) {
     if (message.objectId == 'rgb_light') {
         state.rgbLightKey = key
     }
-    if (message.objectId == 'accessory_power') {
-        state.accessoryPowerKey = key
+    if (message.objectId == 'calibrate_scd40_to_420ppm') {
+        state.calibrateScd40Key = key
+    }
+    if (message.objectId == 'clean_sen55') {
+        state.cleanSen55Key = key
+    }
+    if (message.objectId == 'esp_reboot') {
+        state.espRebootKey = key
     }
 }
 
@@ -400,30 +448,23 @@ void handleEntityState(Map message, Map entity, String objectId) {
         case 'rgb_light':
             handleRgbLightState(message)
             break
-        case 'accessory_power':
-            handleAccessoryPowerState(message)
-            break
         case 'prevent_sleep':
             handlePreventSleepState(message)
             break
-        case 'select_sensor':
-            handleSelectSensorState(message)
-            break
-        case 'soil_temperature':
-        case 'air_temperature':
+        case 'sen55_temperature':
             handleTemperatureState(message, entity)
             break
-        case 'air_humidity':
+        case 'sen55_humidity':
             handleHumidityState(message, entity)
             break
-        case 'ltr390_light':
-            handleIlluminanceState(message, entity)
+        case 'dps310_pressure':
+            handlePressureState(message, entity)
             break
-        case 'ltr390_uv_index':
-            handleUVIndexState(message, entity)
+        case 'co2':
+            handleCO2State(message, entity)
             break
-        case 'soil_moisture':
-            handleSoilMoistureState(message, entity)
+        case 'voc_quality':
+            handleVocQualityState(message, entity)
             break
         default:
             // Use common handler for most entities
@@ -476,20 +517,20 @@ private void handleGenericEntityState(Map message, Map entity) {
                 formattedValue = String.format("%.1f", processedValue)
                 
                 // Special case: Sync offset preferences with ESPHome values
-                if (objectId == 'air_humidity_offset') {
-                    Float currentPref = settings.airHumidityOffset as Float
+                if (objectId == 'sen55_humidity_offset') {
+                    Float currentPref = settings.sen55HumidityOffset as Float
                     if (currentPref != processedValue) {
-                        device.updateSetting('airHumidityOffset', processedValue)
-                        if (txtEnable && shouldReportDiagnostic(objectId)) {
-                            log.info "Air humidity offset preference synced from ESPHome to ${processedValue}%"
+                        device.updateSetting('sen55HumidityOffset', processedValue)
+                        if (txtEnable && shouldReportDiagnostic(objectId)) { 
+                            log.info "SEN55 humidity offset preference synced from ESPHome to ${processedValue}%" 
                         }
                     }
-                } else if (objectId == 'air_temperature_offset') {
-                    Float currentPref = settings.airTemperatureOffset as Float
+                } else if (objectId == 'sen55_temperature_offset') {
+                    Float currentPref = settings.sen55TemperatureOffset as Float
                     if (currentPref != processedValue) {
-                        device.updateSetting('airTemperatureOffset', processedValue)
-                        if (txtEnable && shouldReportDiagnostic(objectId)) {
-                            log.info "Air temperature offset preference synced from ESPHome to ${processedValue}°"
+                        device.updateSetting('sen55TemperatureOffset', processedValue)
+                        if (txtEnable && shouldReportDiagnostic(objectId)) { 
+                            log.info "SEN55 temperature offset preference synced from ESPHome to ${processedValue}°" 
                         }
                     }
                 }
@@ -504,7 +545,14 @@ private void handleGenericEntityState(Map message, Map entity) {
             
         case 'sensor':
             processedValue = rawValue as Float
-            formattedValue = String.format("%.2f", processedValue)
+            // Use appropriate precision based on sensor type
+            if (unit == 'ppm') {
+                formattedValue = String.format("%.2f", processedValue)
+            } else if (unit == 'µg/m³') {
+                formattedValue = String.format("%.1f", processedValue)
+            } else {
+                formattedValue = String.format("%.0f", processedValue)  // For indices and counts
+            }
             break
             
         case 'config':
@@ -514,8 +562,8 @@ private void handleGenericEntityState(Map message, Map entity) {
                 processedValue = temp
                 formattedValue = String.format("%.1f", temp)
             } else {
-                processedValue = rawValue as Float
-                formattedValue = String.format("%.2f", processedValue)
+                processedValue = rawValue
+                formattedValue = String.format("%.0f", processedValue)
             }
             break
             
@@ -566,35 +614,55 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
 }
 
-void setAccessoryPower(String value) {
-    def powerKey = state.accessoryPowerKey
+void calibrateScd40(String value) {
+    def calibrateKey = state.calibrateScd40Key
     
-    if (powerKey == null) {
-        log.warn "Accessory power entity not found"
+    if (calibrateKey == null) {
+        log.warn "Calibrate SCD40 entity not found"
         return
     }
     
-    if (value == 'on') {
-        if (txtEnable) { log.info "${device} Accessory power on" }
-        espHomeSwitchCommand(key: powerKey, state: true)
-    } else if (value == 'off') {
-        if (txtEnable) { log.info "${device} Accessory power off" }
-        espHomeSwitchCommand(key: powerKey, state: false)
+    if (value == 'calibrate') {
+        if (txtEnable) { log.info "${device} calibrating SCD40 CO2 sensor to 420ppm" }
+        espHomeButtonCommand(key: calibrateKey)
     } else {
-        log.warn "Unsupported accessory power value: ${value}"
+        log.warn "Unsupported calibrate SCD40 value: ${value}"
     }
 }
 
-private void handleAccessoryPowerState(Map message) {
-    // For switch entities, check for 'state' directly since they don't use 'hasState'
-    if (message.state != null) {
-        def powerState = message.state as Boolean
-        sendEvent(name: "accessoryPower", value: powerState ? 'on' : 'off', descriptionText: "Accessory Power is ${powerState ? 'on' : 'off'}")
-        if (txtEnable) { log.info "Accessory Power is ${powerState ? 'on' : 'off'}" }
+void cleanSen55(String value) {
+    def cleanKey = state.cleanSen55Key
+    
+    if (cleanKey == null) {
+        log.warn "Clean SEN55 entity not found"
+        return
+    }
+    
+    if (value == 'clean') {
+        if (txtEnable) { log.info "${device} cleaning SEN55 sensor" }
+        espHomeButtonCommand(key: cleanKey)
     } else {
-        if (logEnable) { log.warn "Accessory power message does not contain state: ${message}" }
+        log.warn "Unsupported clean SEN55 value: ${value}"
     }
 }
+
+void espReboot(String value) {
+    def rebootKey = state.espRebootKey
+    
+    if (rebootKey == null) {
+        log.warn "ESP reboot entity not found"
+        return
+    }
+    
+    if (value == 'reboot') {
+        if (txtEnable) { log.info "${device} rebooting ESP32" }
+        espHomeButtonCommand(key: rebootKey)
+    } else {
+        log.warn "Unsupported ESP reboot value: ${value}"
+    }
+}
+
+
 
 private void handlePreventSleepState(Map message) {
     // For switch entities, check for 'state' directly since they don't use 'hasState'
@@ -611,41 +679,12 @@ private void handlePreventSleepState(Map message) {
     }
 }
 
-private void handleSelectSensorState(Map message) {
-    if (message.hasState) {
-        def selectedSensor = message.state as String
-        
-        if (shouldReportDiagnostic('select_sensor')) {
-            sendEvent(name: "selectedSensor", value: selectedSensor, descriptionText: "Selected sensor is ${selectedSensor}")
-        }
-        
-        // Only log if diagnostic reporting allows it
-        if (txtEnable && shouldReportDiagnostic('select_sensor')) { 
-            log.info "ESPHome selected sensor changed to: ${selectedSensor}" 
-        }
-        
-        // Sync the preference setting with ESPHome selection (avoid loops)
-        if (settings.temperaturePreference != selectedSensor) {
-            device.updateSetting('temperaturePreference', selectedSensor)
-            if (txtEnable && shouldReportDiagnostic('select_sensor')) { 
-                log.info "Temperature preference synced from ESPHome to ${selectedSensor}" 
-            }
-        }
-        
-        if (txtEnable && shouldReportDiagnostic('select_sensor')) { 
-            log.info "Selected sensor is ${selectedSensor}" 
-        }
-    } else {
-        if (logEnable) { log.warn "Select sensor message does not have state: ${message}" }
-    }
-}
-
 /**
- * Handle illuminance sensor entity (ltr390_light)
+ * Handle DPS310 pressure sensor
  * @param message state message from ESPHome
  * @param entity entity information from state.entities
  */
-private void handleIlluminanceState(Map message, Map entity) {
+private void handlePressureState(Map message, Map entity) {
     if (!message.hasState) {
         return
     }
@@ -657,34 +696,36 @@ private void handleIlluminanceState(Map message, Map entity) {
         return
     }
     
-    Float illuminance = message.state as Float
-    Integer illuminanceInt = Math.round(illuminance) as Integer
+    Float pressure = message.state as Float
+    String pressureStr = String.format("%.1f", pressure)
     String attributeName = entityInfo.attr
     String description = entityInfo.description
-    String unit = "lx"  // Standard unit for illuminance
+    String unit = "hPa"  // Unit from ESPHome
     
-    // Get the previous illuminance value from current state
-    def currentIlluminanceState = device.currentState(attributeName)
-    String previousValue = currentIlluminanceState?.value
+    // Get the previous pressure value
+    def currentPressureState = device.currentState(attributeName)
+    String previousValue = currentPressureState?.value
     
     // Only send event and log if the value has changed
-    if (previousValue != illuminanceInt.toString()) {
-        // Always send illuminance event (ltr390_light is isDiag: false)
-        sendEvent(name: attributeName, value: illuminanceInt, unit: unit, descriptionText: "${description} is ${illuminanceInt} ${unit}")
+    if (previousValue != pressureStr) {
+        // Send individual sensor event
+        sendEvent(name: attributeName, value: pressureStr, unit: unit, descriptionText: "${description} is ${pressureStr} ${unit}")
         
-        // Always log illuminance (it's not a diagnostic attribute)
+        // Also update main pressure attribute for Hubitat capability compatibility
+        sendEvent(name: "pressure", value: pressureStr, unit: unit, descriptionText: "Pressure is ${pressureStr} ${unit}")
+        
         if (txtEnable) { 
-            log.info "${description} is ${illuminanceInt} ${unit}" 
+            log.info "${description} is ${pressureStr} ${unit}" 
         }
     }
 }
 
 /**
- * Handle UV index sensor entity (ltr390_uv_index)
+ * Handle CO2 sensor (SCD40)
  * @param message state message from ESPHome
  * @param entity entity information from state.entities
  */
-private void handleUVIndexState(Map message, Map entity) {
+private void handleCO2State(Map message, Map entity) {
     if (!message.hasState) {
         return
     }
@@ -696,34 +737,35 @@ private void handleUVIndexState(Map message, Map entity) {
         return
     }
     
-    Float uvIndex = message.state as Float
-    String uvIndexStr = String.format("%.5f", uvIndex)  // More precision for UV index
+    Integer co2 = Math.round(message.state as Float) as Integer
     String attributeName = entityInfo.attr
     String description = entityInfo.description
-    String unit = "UVI"  // UV Index unit
+    String unit = "ppm"
     
-    // Get the previous UV index value from current state
-    def currentUVState = device.currentState(attributeName)
-    String previousValue = currentUVState?.value
+    // Get the previous CO2 value
+    def currentCO2State = device.currentState(attributeName)
+    String previousValue = currentCO2State?.value
     
     // Only send event and log if the value has changed
-    if (previousValue != uvIndexStr) {
-        // Always send UV index event (ltr390_uv_index is isDiag: false)
-        sendEvent(name: attributeName, value: uvIndexStr, unit: unit, descriptionText: "${description} is ${uvIndexStr} ${unit}")
+    if (previousValue != co2.toString()) {
+        // Send individual sensor event
+        sendEvent(name: attributeName, value: co2, unit: unit, descriptionText: "${description} is ${co2} ${unit}")
         
-        // Always log UV index (it's not a diagnostic attribute)
+        // Also update main carbonDioxide attribute for Hubitat capability compatibility
+        sendEvent(name: "carbonDioxide", value: co2, unit: unit, descriptionText: "Carbon Dioxide is ${co2} ${unit}")
+        
         if (txtEnable) { 
-            log.info "${description} is ${uvIndexStr} ${unit}" 
+            log.info "${description} is ${co2} ${unit}" 
         }
     }
 }
 
 /**
- * Handle soil moisture sensor entity
+ * Handle VOC quality text sensor
  * @param message state message from ESPHome
  * @param entity entity information from state.entities
  */
-private void handleSoilMoistureState(Map message, Map entity) {
+private void handleVocQualityState(Map message, Map entity) {
     if (!message.hasState) {
         return
     }
@@ -735,24 +777,20 @@ private void handleSoilMoistureState(Map message, Map entity) {
         return
     }
     
-    Float moisture = message.state as Float
-    String moistureStr = String.format("%.1f", moisture)
+    String vocQuality = message.state as String
     String attributeName = entityInfo.attr
     String description = entityInfo.description
-    String unit = "%"  // Percentage unit for soil moisture
     
-    // Get the previous moisture value from current state
-    def currentMoistureState = device.currentState(attributeName)
-    String previousValue = currentMoistureState?.value
+    // Get the previous VOC quality value
+    def currentVocState = device.currentState(attributeName)
+    String previousValue = currentVocState?.value
     
     // Only send event and log if the value has changed
-    if (previousValue != moistureStr) {
-        // Always send moisture event (soil_moisture is isDiag: false)
-        sendEvent(name: attributeName, value: moistureStr, unit: unit, descriptionText: "${description} is ${moistureStr} ${unit}")
+    if (previousValue != vocQuality) {
+        sendEvent(name: attributeName, value: vocQuality, descriptionText: "${description} is ${vocQuality}")
         
-        // Always log moisture (it's not a diagnostic attribute)
         if (txtEnable) { 
-            log.info "${description} is ${moistureStr} ${unit}" 
+            log.info "${description} is ${vocQuality}" 
         }
     }
 }
@@ -761,5 +799,3 @@ private void handleSoilMoistureState(Map message, Map entity) {
 
 #include esphome.espHomeApiHelperKKmod
 #include apollo.espHomeApolloLibraryCommon
-
-

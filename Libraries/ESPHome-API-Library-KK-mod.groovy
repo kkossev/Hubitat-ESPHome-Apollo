@@ -20,7 +20,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  *
- *  version 2.0.0 - 2025-06-21 kkossev
+ *  version 2.0.0 - 2025-06-21 kkossev - initial clone version
+ *  version 2.0.1 - 2025-07-12 kkossev - reverted changes in pauseExecution(), setNetworkStatus() and removed READ_DELY_TIMEOUT
  *
  *                             TODO: 
  **/
@@ -52,6 +53,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 @Field static final int SEND_RETRY_SECONDS = 5
 @Field static final int MAX_RECONNECT_SECONDS = 60
 @Field static final String NETWORK_ATTRIBUTE = 'networkStatus' // Device attribute
+@Field static final int CLOSE_SOCKET_TIMEOUT = 1000 // was 1 second
 
 // Static objects shared between all devices using this driver library
 @Field static final Map<String, ByteArrayOutputStream> espReceiveBuffer = new ConcurrentHashMap<>()
@@ -88,7 +90,7 @@ void closeSocket(String reason) {
     setNetworkStatus('offline', reason)
     device.updateDataValue 'Last Disconnected Time', "${new Date()} (${reason})"
     interfaces.rawSocket.close()
-    pauseExecution(1000)
+    pauseExecution(CLOSE_SOCKET_TIMEOUT)
 }
 
 // parse received socket status - do not change this function name or driver will break
@@ -1448,7 +1450,7 @@ private void setNetworkStatus(String state, String reason = '') {
     String descriptionText = "${device} is ${state}"
     if (reason) { descriptionText += ": ${reason}" }
     sendEvent([ name: NETWORK_ATTRIBUTE, value: state, descriptionText: descriptionText ])
-    log.info descriptionText
+    logInfoLib descriptionText
     parse([ 'platform': 'network', 'type': 'state', 'state': state, 'reason': reason ])
 }
 
@@ -1502,19 +1504,19 @@ private void logInfoLib(String s) {
 }
 
 private void logTraceLib(String s) {
-    if (logTraceEnable) {
+    if (logWarnEnable) {
         log.trace s
     }
 }
 
 private void logErrorLib(String s) {
-    if (logDebugEnable) {
+    if (logWarnEnable) {
         log.error s
     }
 }
 
 private void logDebugLib(String s) {
-    if (logDebugEnable) {
+    if (logWarnEnable) {
         log.debug s
     }
 }

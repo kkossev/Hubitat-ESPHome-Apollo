@@ -21,6 +21,7 @@
  *  SOFTWARE.
  *
  *  ver. 1.0.0  2022-07-04 kkossev  - first beta version
+ *  ver. 1.0.1  2022-07-12 kkossev  - use a Common library for ESPHome Apollo drivers
  * 
  *                         TODO: 
 */
@@ -28,8 +29,8 @@
 import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
-@Field static final String DRIVER_VERSION =  '1.0.0'
-@Field static final String DATE_TIME_STAMP = '07/04/2025 7:55 PM'
+@Field static final String DRIVER_VERSION =  '1.0.1'
+@Field static final String DATE_TIME_STAMP = '07/12/2025 9:58 PM'
 
 metadata {
     definition(
@@ -116,6 +117,7 @@ metadata {
 ]
 
 /**
+/**
  * Get entity information from the ALL_ENTITIES map
  * @param objectId ESPHome entity objectId
  * @return entity information map or null if not found
@@ -194,35 +196,10 @@ private boolean shouldReportDiagnostic(String objectId) {
     return false
 }
 
-public void initialize() {
-    // API library command to open socket to device, it will automatically reconnect if needed
-    openSocket()
-
-    if (logEnable) {
-        runIn(1800, 'logsOff')
-    }
-}
-
-public void installed() {
-    log.info "${device} driver installed"
-}
-
-public void logsOff() {
-    espHomeSubscribeLogs(LOG_LEVEL_INFO, false) // disable device logging
-    device.updateSetting('logEnable', false)
-    log.info "${device} debug logging disabled"
-}
-
-public void refresh() {
-    checkDriverVersion()
-    log.info "${device} refresh"
-    state.clear()
-    state.requireRefresh = true
-    espHomeDeviceInfoRequest()
-}
+// Lifecycle methods
 
 public void updated() {
-    checkDriverVersion()
+    checkDriverVersion(DRIVER_VERSION, DATE_TIME_STAMP, _DEBUG)
     log.info "${device} driver configuration updated"
     
     // Delete diagnostic attribute states if diagnostics reporting is disabled
@@ -295,15 +272,9 @@ private void syncBoardHumidityOffset() {
     espHomeNumberCommand(key: offsetKey, state: offset)
 }
 
-public void uninstalled() {
-    closeSocket('driver uninstalled') // make sure the socket is closed when uninstalling
-    log.info "${device} driver uninstalled"
-}
-
 // the parse method is invoked by the API library when messages are received
 void parse(final Map message) {
-    checkDriverVersion()
-    if (logEnable) { log.debug "ESPHome received: ${message}" }
+    if (logEnable) { log.debug "parseTEMP: ${message}" }
 
     switch (message.type) {
         case 'device':
@@ -319,6 +290,9 @@ void parse(final Map message) {
     }
 }
 
+/**
+ * parseKeys - Process entity registration from ESPHome
+ */
 void parseKeys(final Map message) {
     if (state.entities == null) { state.entities = [:] }
     
@@ -330,10 +304,8 @@ void parseKeys(final Map message) {
         // Store the entity using string representation of key for consistent map access
         state.entities["$key"] = message
         
-        // Store specific entity keys for quick access
-        if (message.objectId == 'rgb_light') {
-            state.rgbLightKey = key
-        }
+        // Store specific entity keys for easy access
+        storeSpecificEntityKeys(message, key)
         
         if (logEnable) { 
             log.debug "entity registered: ${message.objectId} (key=${key}, platform=${message.platform})" 
@@ -345,7 +317,9 @@ void parseKeys(final Map message) {
     }
 }
 
-
+/**
+ * parseState - Process state updates from ESPHome
+ */
 void parseState(final Map message) {
     if (message.key == null) { return }
     
@@ -371,6 +345,19 @@ void parseState(final Map message) {
         return 
     }
 
+    // Route to appropriate handler
+    handleEntityState(message, entity, objectId)
+}
+
+// Driver-specific entity key storage
+void storeSpecificEntityKeys(Map message, Long key) {
+    if (message.objectId == 'rgb_light') {
+        state.rgbLightKey = key
+    }
+}
+
+// Driver-specific entity state handler
+void handleEntityState(Map message, Map entity, String objectId) {
     // Handle special cases that need custom logic
     switch (objectId) {
         case 'rgb_light':
@@ -528,105 +515,6 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
 }
 
-/**
- * Check if the specified value is null or empty
- * @param value value to check
- * @return true if the value is null or empty, false otherwise
- */
-private static boolean isNullOrEmpty(final Object value) {
-    return value == null || (value as String).trim().isEmpty()
-}
-
-
-void setRgbLight(String value) {
-    def lightKey = state.rgbLightKey
-    
-    if (lightKey == null) {
-        log.warn "RGB light entity not found"
-        return
-    }
-    
-    if (value == 'on') {
-        if (txtEnable) { log.info "${device} RGB light on" }
-        espHomeLightCommand(key: lightKey, state: true)
-    } else if (value == 'off') {
-        if (txtEnable) { log.info "${device} RGB light off" }
-        espHomeLightCommand(key: lightKey, state: false)
-    } else {
-        log.warn "Unsupported RGBlight value: ${value}"
-    }
-}
-
-
-
-private void handleRgbLightState(Map message) {
-    // For light entities, check for 'state' directly since they don't use 'hasState'
-    if (message.state != null) {
-        def rgbLightState = message.state as Boolean
-        sendEvent(name: "rgbLight", value: rgbLightState ? 'on' : 'off', descriptionText: "RGB Light is ${rgbLightState ? 'on' : 'off'}")
-        if (txtEnable) { log.info "RGB Light is ${rgbLightState ? 'on' : 'off'}" }
-    } else {
-        if (logEnable) { log.warn "RGB light message does not contain state: ${message}" }
-    }
-}
-
-/**
- * Handle temperature probe entities (food_probe and temperature_probe)
- * @param message state message from ESPHome
- * @param entity entity information from state.entities
- */
-private void handleTemperatureState(Map message, Map entity) {
-    if (!message.hasState) {
-        return
-    }
-    
-    String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
-    if (!entityInfo) {
-        if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
-        return
-    }
-    
-    Float tempC = message.state as Float
-    Float temp = convertTemperature(tempC)
-    String unit = getTemperatureUnit()
-    String tempStr = String.format("%.1f", temp)
-    String attributeName = entityInfo.attr
-    String description = entityInfo.description
-    
-    // Get the previous individual probe temperature value
-    def currentProbeState = device.currentState(attributeName)
-    String previousProbeValue = currentProbeState?.value
-    
-    // Send individual probe events only when Debug logging is enabled AND value has changed
-    if (settings.logEnable && previousProbeValue != tempStr) {
-        sendEvent(name: attributeName, value: tempStr, unit: unit, descriptionText: "${description} is ${tempStr} ${unit}")
-        log.info "${description} is ${tempStr} ${unit}"
-    }
-    
-    // Update main temperature attribute based on selected probe
-    String selectedProbeType = (objectId == 'food_probe') ? 'Food' : 'Temperature'
-    if (settings.selectedProbe == selectedProbeType) {
-        // Get the previous main temperature value
-        def currentMainTempState = device.currentState("temperature")
-        String previousMainValue = currentMainTempState?.value
-        
-        // Only update main temperature if the value has changed
-        if (previousMainValue != tempStr) {
-            String mainDescription = "Temperature is ${tempStr} ${unit}"  // Create new variable instead of reassigning
-            sendEvent(name: "temperature", value: tempStr, unit: unit, descriptionText: mainDescription)
-            if (txtEnable) { 
-                log.info "${mainDescription}" 
-            }
-        }
-        else {
-            if (logEnable) { 
-                log.debug "Main temperature already at ${tempStr} ${unit}, no update needed" 
-            }
-        }
-    }
-}
-
 private void handleSelectProbeState(Map message) {
     if (message.hasState) {
         def selectedProbe = message.state as String
@@ -656,81 +544,7 @@ private void handleSelectProbeState(Map message) {
     }
 }
 
-/**
- * Handle humidity sensor entity (board_humidity)
- * @param message state message from ESPHome
- * @param entity entity information from state.entities
- */
-private void handleHumidityState(Map message, Map entity) {
-    if (!message.hasState) {
-        return
-    }
-    
-    String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
-    if (!entityInfo) {
-        if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
-        return
-    }
-    
-    Float humidity = message.state as Float
-    String humidityStr = String.format("%.1f", humidity)
-    String attributeName = entityInfo.attr
-    String description = entityInfo.description
-    String unit = "%rh"  // Hubitat standard unit for relative humidity
-    
-    // Get the previous humidity value from current state
-    def currentHumidityState = device.currentState(attributeName)
-    String previousValue = currentHumidityState?.value
-    
-    // Only send event and log if the value has changed
-    if (previousValue != humidityStr) {
-        // Always send humidity event (board_humidity is isDiag: false)
-        sendEvent(name: attributeName, value: humidityStr, unit: unit, descriptionText: "${description} is ${humidityStr} ${unit}")
-        
-        // Always log humidity (it's not a diagnostic attribute)
-        if (txtEnable) { 
-            log.info "${description} is ${humidityStr} ${unit}" 
-        }
-    }
-}
-
-/**
- * Convert temperature based on hub's temperature scale setting
- * @param tempC temperature in Celsius
- * @return temperature in the hub's preferred scale
- */
-private def convertTemperature(Float tempC) {
-    if (location.temperatureScale == 'F') {
-        return (tempC * 9/5) + 32
-    }
-    return tempC
-}
-
-/**
- * Get temperature unit based on hub's temperature scale setting
- * @return temperature unit string
- */
-private String getTemperatureUnit() {
-    return location.temperatureScale == 'F' ? '°F' : '°C'
-}
-
-private String driverVersionAndTimeStamp() { 
-    String debugSuffix = _DEBUG ? ' (debug version!)' : ''
-    return "${DRIVER_VERSION} ${DATE_TIME_STAMP} ${debugSuffix} (${getHubVersion()} ${location.hub.firmwareVersionString})"
-}
-
-//@CompileStatic
-public void checkDriverVersion() {
-    if (state.driverVersion == null || driverVersionAndTimeStamp() != state.driverVersion) {
-        if (txtEnable) { log.info "checkDriverVersion: updating the settings from the current driver version ${state.driverVersion} to the new version ${driverVersionAndTimeStamp()}" }
-        //sendInfoEvent("Updated to version ${driverVersionAndTimeStamp()}")
-        //logInfo("Updated to version ${driverVersionAndTimeStamp()}")
-        state.driverVersion = driverVersionAndTimeStamp()
-    }
-}
-
-
 // Put this line at the end of the driver to include the ESPHome API library helper
 
 #include esphome.espHomeApiHelperKKmod
+#include apollo.espHomeApolloLibraryCommon
