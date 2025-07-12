@@ -17,6 +17,58 @@ library(
 
 @Field static final String APOLLO_COMMON_LIBRARY_VERSION = '1.0.0'
 
+metadata {
+        if (_DEBUG) {
+            command 'test', [[name: 'test', type: 'STRING', description: 'test', defaultValue : '']]
+        }
+
+        // common capabilities for all device types
+        //capability 'Configuration'
+        capability 'Refresh'
+        capability 'HealthCheck'
+        capability 'PowerSource'       // powerSource - ENUM ["battery", "dc", "mains", "unknown"]
+
+        // common attributes for all device types
+        attribute 'healthStatus', 'enum', ['unknown', 'offline', 'online']
+        attribute 'rtt', 'number'
+        attribute 'Status', 'string'
+        
+        // Common attributes across all Apollo drivers
+        attribute 'networkStatus', 'enum', ['connecting', 'online', 'offline']  // Device network connection status
+        attribute 'online', 'enum', ['true', 'false']     // Device online status from ESPHome
+        attribute 'espTemperature', 'number'           // ESP32 internal temperature
+        attribute 'rgbLight', 'enum', ['on', 'off']    // RGB LED control
+        attribute 'preventSleep', 'enum', ['on', 'off'] // Prevent device sleep mode
+        attribute 'sleepDuration', 'number'            // Sleep duration between measurements
+        attribute 'uptime', 'string'                   // Device uptime since last restart
+        attribute 'rssi', 'number'                     // WiFi signal strength
+
+        // Common attributes for battery-powered devices (PLT-1B, TEMP-1B)
+        attribute 'batteryVoltage', 'number'           // Battery voltage measurement
+
+        // common commands for all device types
+        //command 'configure', [[name:'normally it is not needed to configure anything', type: 'ENUM', constraints: ConfigureOpts.keySet() as List<String>]]
+        command 'setRgbLight', [[name:'LED control', type: 'ENUM', constraints: ['off', 'on']]]
+        command 'espReboot', [[name:'Reboot ESP32', type: 'ENUM', constraints: ['reboot']]]
+        command 'ping', [[name:'Ping device (measure RTT)', type: 'ENUM', constraints: ['ping']]]
+
+
+    preferences {
+        // txtEnable and logEnable moved to the custom driver settings - copy& paste there ...
+        //input name: 'txtEnable', type: 'bool', title: '<b>Enable descriptionText logging</b>', defaultValue: true, description: '<i>Enables command logging.'
+        //input name: 'logEnable', type: 'bool', title: '<b>Enable debug logging</b>', defaultValue: true, description: 'Turns on debug logging for 24 hours.'
+
+        if (device) {
+            input name: 'advancedOptions', type: 'bool', title: '<b>Advanced Options</b>', description: 'These advanced options should be already automatically set in an optimal way for your device...', defaultValue: false
+            if (advancedOptions == true) {
+                //input name: 'healthCheckMethod', type: 'enum', title: '<b>Healthcheck Method</b>', options: HealthcheckMethodOpts.options, defaultValue: HealthcheckMethodOpts.defaultValue, required: true, description: 'Method to check device online/offline status.'
+                //input name: 'healthCheckInterval', type: 'enum', title: '<b>Healthcheck Interval</b>', options: HealthcheckIntervalOpts.options, defaultValue: HealthcheckIntervalOpts.defaultValue, required: true, description: 'How often the hub will check the device health.<br>3 consecutive failures will result in status "offline"'
+                //input name: 'traceEnable', type: 'bool', title: '<b>Enable trace logging</b>', defaultValue: false, description: 'Turns on detailed extra trace logging for 30 minutes.'
+            }
+        }
+    }
+}
+
 /**
  * Convert temperature based on hub's temperature scale setting
  * @param tempC temperature in Celsius
@@ -89,14 +141,15 @@ void handleRgbLightState(Map message) {
  * Always updates both individual sensor attributes AND main temperature attribute
  * @param message state message from ESPHome
  * @param entity entity information from state.entities
+ * @param entitiesMap the ALL_ENTITIES map from the calling driver
  */
-void handleTemperatureState(Map message, Map entity) {
+void handleTemperatureState(Map message, Map entity, Map entitiesMap) {
     if (!message.hasState) {
         return
     }
     
     String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
+    def entityInfo = getEntityInfo(entitiesMap, objectId)
     if (!entityInfo) {
         if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
         return
@@ -132,14 +185,15 @@ void handleTemperatureState(Map message, Map entity) {
  * Always updates both individual sensor attributes AND main humidity attribute
  * @param message state message from ESPHome
  * @param entity entity information from state.entities
+ * @param entitiesMap the ALL_ENTITIES map from the calling driver
  */
-void handleHumidityState(Map message, Map entity) {
+void handleHumidityState(Map message, Map entity, Map entitiesMap) {
     if (!message.hasState) {
         return
     }
     
     String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
+    def entityInfo = getEntityInfo(entitiesMap, objectId)
     if (!entityInfo) {
         if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
         return
@@ -219,6 +273,149 @@ void uninstalled() {
 }
 
 // ============================= UTILITY METHODS =============================
+
+/**
+ * Get entity information from the provided entities map
+ * @param entitiesMap the ALL_ENTITIES map from the calling driver
+ * @param objectId ESPHome entity objectId
+ * @return entity information map or null if not found
+ */
+static Map getEntityInfo(Map entitiesMap, String objectId) {
+    return entitiesMap[objectId]
+}
+
+/**
+ * Get the unit for a specific entity from state.entities, with fallback to ALL_ENTITIES
+ * @param entitiesMap the ALL_ENTITIES map from the calling driver
+ * @param objectId ESPHome entity objectId
+ * @return unit string with temperature scale applied
+ */
+String getEntityUnit(Map entitiesMap, String objectId) {
+    // First try to get unit from state.entities
+    def entity = state.entities?.values()?.find { it.objectId == objectId }
+    String unit = entity?.unitOfMeasurement as String
+    
+    // If no unit found in state.entities, use fallback from entitiesMap (if provided)
+    if (!unit) {
+        def entityInfo = entitiesMap[objectId]
+        unit = entityInfo?.unit as String ?: ''
+    }
+    
+    // Convert temperature units based on hub setting
+    if (unit == '°C' && location.temperatureScale == 'F') {
+        return '°F'
+    }
+    
+    return unit
+}
+
+/**
+ * Get entity type for classification
+ * @param entitiesMap the ALL_ENTITIES map from the calling driver
+ * @param objectId ESPHome entity objectId
+ * @return entity type string
+ */
+String getEntityType(Map entitiesMap, String objectId) {
+    def entityInfo = getEntityInfo(entitiesMap, objectId)
+    return entityInfo?.type as String ?: 'unknown'
+}
+
+/**
+ * Get entity description for logging
+ * @param entitiesMap the ALL_ENTITIES map from the calling driver
+ * @param objectId ESPHome entity objectId
+ * @return entity description string
+ */
+String getEntityDescription(Map entitiesMap, String objectId) {
+    def entityInfo = getEntityInfo(entitiesMap, objectId)
+    return entityInfo?.description as String ?: objectId
+}
+
+/**
+ * Check if diagnostic reporting is enabled for the given entity
+ * @param entitiesMap the ALL_ENTITIES map from the calling driver
+ * @param objectId ESPHome entity objectId
+ * @param diagnosticsReporting the diagnosticsReporting setting from the calling driver
+ * @return true if events should be sent, false if diagnostic reporting is disabled
+ */
+boolean shouldReportDiagnostic(Map entitiesMap, String objectId, Boolean diagnosticsReporting) {
+    // If diagnosticsReporting is enabled, always report
+    if (diagnosticsReporting == true) {
+        return true
+    }
+    
+    // If the entity is not in the map, always report
+    if (!entitiesMap.containsKey(objectId)) {
+        return true
+    }
+    
+    // Check if the entity is marked as diagnostic
+    def entityInfo = entitiesMap[objectId]
+    if (entityInfo?.isDiag != true) {
+        return true
+    }
+    
+    // Entity is diagnostic and reporting is disabled
+    return false
+}
+
+/**
+ * ESP32 reboot command - sends reboot command to ESPHome device
+ * @param value command value ('reboot' to execute, anything else is ignored)
+ */
+void espReboot(String value) {
+    def rebootKey = state.espRebootKey
+    
+    if (rebootKey == null) {
+        log.warn "ESP reboot entity not found"
+        return
+    }
+    
+    if (value == 'reboot') {
+        if (txtEnable) { log.info "${device} rebooting ESP32" }
+        espHomeButtonCommand(key: rebootKey)
+    } else {
+        log.warn "Unsupported ESP reboot value: ${value}"
+    }
+}
+
+/**
+ * Ping command - measures round-trip time to ESPHome device
+ * Sends a harmless device info request and measures response time
+ * @param value command value ('ping' to execute, anything else is ignored)
+ */
+void ping(String value = 'ping') {
+    if (value != 'ping') {
+        log.warn "Unsupported ping value: ${value}"
+        return
+    }
+    
+    // Record the start time for RTT measurement
+    state.pingStartTime = now()
+    
+    if (txtEnable) { log.info "${device} sending ping to measure RTT" }
+    
+    // Send a harmless device info request - all ESPHome devices support this
+    espHomeDeviceInfoRequest()
+}
+
+/**
+ * Handle ping response by calculating and reporting RTT
+ * This should be called when a device info response is received during a ping
+ */
+void handlePingResponse() {
+    if (state.pingStartTime != null) {
+        Long rttMs = now() - state.pingStartTime
+        state.remove('pingStartTime')
+        
+        // Send RTT event
+        sendEvent(name: "rtt", value: rttMs, unit: "ms", descriptionText: "Round-trip time is ${rttMs} ms")
+        
+        if (txtEnable) { 
+            log.info "Ping response received - RTT: ${rttMs} ms" 
+        }
+    }
+}
 
 /**
  * Check if the specified value is null or empty

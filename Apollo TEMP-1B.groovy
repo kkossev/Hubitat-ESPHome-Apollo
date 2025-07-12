@@ -49,13 +49,8 @@ metadata {
         capability 'Initialize'
 
         // attribute populated by ESPHome API Library automatically
-        attribute 'networkStatus', 'enum', [ 'connecting', 'online', 'offline' ]
         attribute "boardTemperature", "number"
-        attribute 'espTemperature', 'number'
         attribute 'temperatureProbe', 'number'  // Add this line
-        attribute "uptime", "number"
-        attribute 'rgbLight', 'enum', ['on', 'off'] 
-        attribute 'batteryVoltage', 'number'
         attribute 'foodProbe', 'number'
         attribute 'alarmOutsideTempRange', 'enum', ['on', 'off']
         attribute 'tempProbeOffset', 'number'
@@ -63,14 +58,11 @@ metadata {
         attribute 'boardTemperatureOffset', 'number'
         attribute 'boardHumidityOffset', 'number'
         attribute 'notifyOnlyOutsideTempDifference', 'enum', ['on', 'off']
-        attribute 'preventSleep', 'enum', ['on', 'off']
         attribute 'selectedProbe', 'string'
-        attribute 'sleepDuration', 'number'
         attribute 'probeTempDifferenceThreshold', 'number'
         attribute 'minProbeTemp', 'number'
         attribute 'maxProbeTemp', 'number'
 
-        command 'setRgbLight', [[name:'LED control', type: 'ENUM', constraints: ['off', 'on']]]
     }
 
     preferences {
@@ -118,83 +110,13 @@ metadata {
 
 /**
 /**
- * Get entity information from the ALL_ENTITIES map
- * @param objectId ESPHome entity objectId
- * @return entity information map or null if not found
- */
-private Map getEntityInfo(String objectId) {
-    return ALL_ENTITIES[objectId]
-}
-
-/**
  * Get the unit for a specific entity from state.entities, with fallback to ALL_ENTITIES
  * @param objectId ESPHome entity objectId
  * @return unit string with temperature scale applied
  */
-private String getEntityUnit(String objectId) {
-    // First try to get unit from state.entities
-    def entity = state.entities?.values()?.find { it.objectId == objectId }
-    String unit = entity?.unitOfMeasurement as String
-    
-    // If no unit found in state.entities, use fallback from ALL_ENTITIES (if provided)
-    if (!unit) {
-        def entityInfo = ALL_ENTITIES[objectId]
-        unit = entityInfo?.unit as String ?: ''
-    }
-    
-    // Convert temperature units based on hub setting
-    if (unit == '°C' && location.temperatureScale == 'F') {
-        return '°F'
-    }
-    
-    return unit
-}
 
-/**
- * Get entity type for classification
- * @param objectId ESPHome entity objectId
- * @return entity type string
- */
-private String getEntityType(String objectId) {
-    def entityInfo = getEntityInfo(objectId)
-    return entityInfo?.type as String ?: 'unknown'
-}
 
-/**
- * Get entity description for logging
- * @param objectId ESPHome entity objectId
- * @return entity description string
- */
-private String getEntityDescription(String objectId) {
-    def entityInfo = getEntityInfo(objectId)
-    return entityInfo?.description as String ?: objectId
-}
 
-/**
- * Check if diagnostic reporting is enabled for the given entity
- * @param objectId ESPHome entity objectId
- * @return true if events should be sent, false if diagnostic reporting is disabled
- */
-private boolean shouldReportDiagnostic(String objectId) {
-    // If diagnosticsReporting is enabled, always report
-    if (settings.diagnosticsReporting == true) {
-        return true
-    }
-    
-    // If the entity is not in the map, always report
-    if (!ALL_ENTITIES.containsKey(objectId)) {
-        return true
-    }
-    
-    // Check if the entity is marked as diagnostic
-    def entityInfo = ALL_ENTITIES[objectId]
-    if (entityInfo?.isDiag != true) {
-        return true
-    }
-    
-    // Entity is diagnostic and reporting is disabled
-    return false
-}
 
 // Lifecycle methods
 
@@ -278,7 +200,8 @@ void parse(final Map message) {
 
     switch (message.type) {
         case 'device':
-            // Device information
+            // Device information - also handle ping response
+            handlePingResponse()
             break
 
         case 'entity':
@@ -354,6 +277,9 @@ void storeSpecificEntityKeys(Map message, Long key) {
     if (message.objectId == 'rgb_light') {
         state.rgbLightKey = key
     }
+    if (message.objectId == 'esp_reboot') {
+        state.espRebootKey = key
+    }
 }
 
 // Driver-specific entity state handler
@@ -368,10 +294,10 @@ void handleEntityState(Map message, Map entity, String objectId) {
             break
         case 'food_probe':
         case 'temperature_probe':
-            handleTemperatureState(message, entity)
+            handleTemperatureState(message, entity, ALL_ENTITIES)
             break
         case 'board_humidity':
-            handleHumidityState(message, entity)
+            handleHumidityState(message, entity, ALL_ENTITIES)
             break
         default:
             // Use common handler for most entities
@@ -392,7 +318,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
     
     String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
+    def entityInfo = getEntityInfo(ALL_ENTITIES, objectId)
     if (!entityInfo) {
         if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
         return
@@ -400,7 +326,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     
     String attributeName = entityInfo.attr
     String description = entityInfo.description
-    String unit = getEntityUnit(objectId)
+    String unit = getEntityUnit(ALL_ENTITIES, objectId)
     def rawValue = message.state
     def processedValue = rawValue
     String formattedValue = ""
@@ -429,7 +355,7 @@ private void handleGenericEntityState(Map message, Map entity) {
                     Float currentPref = settings.boardHumidityOffset as Float
                     if (currentPref != processedValue) {
                         device.updateSetting('boardHumidityOffset', processedValue)
-                        if (txtEnable && shouldReportDiagnostic(objectId)) {
+                        if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) {
                             log.info "Board humidity offset preference synced from ESPHome to ${processedValue}%"
                         }
                     }
@@ -495,7 +421,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
     
     // Send event if diagnostic reporting allows it
-    if (shouldReportDiagnostic(objectId)) {
+    if (shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) {
         Map eventData = [
             name: attributeName,
             value: (formattedValue ?: processedValue),
@@ -510,7 +436,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
     
     // Only log if text logging is enabled AND diagnostic reporting allows it
-    if (txtEnable && shouldReportDiagnostic(objectId)) {
+    if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) {
         log.info "${description}: ${formattedValue} ${unit}".trim()
     }
 }
@@ -519,24 +445,24 @@ private void handleSelectProbeState(Map message) {
     if (message.hasState) {
         def selectedProbe = message.state as String
         
-        if (shouldReportDiagnostic('select_probe')) {
+        if (shouldReportDiagnostic(ALL_ENTITIES, 'select_probe', settings.diagnosticsReporting)) {
             sendEvent(name: "selectedProbe", value: selectedProbe, descriptionText: "Selected probe is ${selectedProbe}")
         }
         
         // Only log if diagnostic reporting allows it
-        if (txtEnable && shouldReportDiagnostic('select_probe')) { 
+        if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, 'select_probe', settings.diagnosticsReporting)) { 
             log.info "ESPHome selected probe changed to: ${selectedProbe}" 
         }
         
         // Sync the preference setting with ESPHome selection (avoid loops)
         if (settings.selectedProbe != selectedProbe) {
             device.updateSetting('selectedProbe', selectedProbe)
-            if (txtEnable && shouldReportDiagnostic('select_probe')) { 
+            if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, 'select_probe', settings.diagnosticsReporting)) { 
                 log.info "Selected probe preference synced from ESPHome to ${selectedProbe}" 
             }
         }
         
-        if (txtEnable && shouldReportDiagnostic('select_probe')) { 
+        if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, 'select_probe', settings.diagnosticsReporting)) { 
             log.info "Selected probe is ${selectedProbe}" 
         }
     } else {

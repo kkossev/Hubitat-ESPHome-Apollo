@@ -50,8 +50,6 @@ metadata {
         capability 'Initialize'
 
         // attribute populated by ESPHome API Library automatically
-        attribute 'networkStatus', 'enum', [ 'connecting', 'online', 'offline' ]
-        attribute 'online', 'enum', ['true', 'false']        // Device online status from ESPHome
         
         // Primary air quality sensors
         attribute 'sen55Temperature', 'number'          // SEN55 temperature sensor
@@ -82,25 +80,16 @@ metadata {
         
         // Environmental sensors
         attribute 'dps310Pressure', 'number'           // DPS310 pressure sensor
-        attribute 'espTemperature', 'number'           // ESP32 internal temperature
         
         // Configuration and calibration
         attribute 'sen55TemperatureOffset', 'number'   // SEN55 temperature calibration offset
         attribute 'sen55HumidityOffset', 'number'      // SEN55 humidity calibration offset
-        attribute 'sleepDuration', 'number'            // Sleep duration setting
         
         // Controls and status
-        attribute 'rgbLight', 'enum', ['on', 'off']    // RGB LED control
-        attribute 'preventSleep', 'enum', ['on', 'off'] // Prevent sleep mode
-        attribute 'uptime', 'string'                   // Device uptime
-        
         // Diagnostic attributes
-        attribute 'rssi', 'number'                     // WiFi signal strength
 
-        command 'setRgbLight', [[name:'LED control', type: 'ENUM', constraints: ['off', 'on']]]
         command 'calibrateScd40', [[name:'Calibrate CO2 to 420ppm', type: 'ENUM', constraints: ['calibrate']]]
         command 'cleanSen55', [[name:'Clean SEN55 sensor', type: 'ENUM', constraints: ['clean']]]
-        command 'espReboot', [[name:'Reboot ESP32', type: 'ENUM', constraints: ['reboot']]]
     }
 
     preferences {
@@ -165,84 +154,9 @@ metadata {
     'uptime':                              [attr: 'uptime',                         isDiag: true,  type: 'status',      description: 'Device uptime since last restart']
 ]
 
-/**
- * Get entity information from the ALL_ENTITIES map
- * @param objectId ESPHome entity objectId
- * @return entity information map or null if not found
- */
-private Map getEntityInfo(String objectId) {
-    return ALL_ENTITIES[objectId]
-}
 
-/**
- * Get the unit for a specific entity from state.entities, with fallback to ALL_ENTITIES
- * @param objectId ESPHome entity objectId
- * @return unit string with temperature scale applied
- */
-private String getEntityUnit(String objectId) {
-    // First try to get unit from state.entities
-    def entity = state.entities?.values()?.find { it.objectId == objectId }
-    String unit = entity?.unitOfMeasurement as String
-    
-    // If no unit found in state.entities, use fallback from ALL_ENTITIES (if provided)
-    if (!unit) {
-        def entityInfo = ALL_ENTITIES[objectId]
-        unit = entityInfo?.unit as String ?: ''
-    }
-    
-    // Convert temperature units based on hub setting
-    if (unit == '°C' && location.temperatureScale == 'F') {
-        return '°F'
-    }
-    
-    return unit
-}
 
-/**
- * Get entity type for classification
- * @param objectId ESPHome entity objectId
- * @return entity type string
- */
-private String getEntityType(String objectId) {
-    def entityInfo = getEntityInfo(objectId)
-    return entityInfo?.type as String ?: 'unknown'
-}
 
-/**
- * Get entity description for logging
- * @param objectId ESPHome entity objectId
- * @return entity description string
- */
-private String getEntityDescription(String objectId) {
-    def entityInfo = getEntityInfo(objectId)
-    return entityInfo?.description as String ?: objectId
-}
-
-/**
- * Check if diagnostic reporting is enabled for the given entity
- * @param objectId ESPHome entity objectId
- * @return true if events should be sent, false if diagnostic reporting is disabled
- */
-private boolean shouldReportDiagnostic(String objectId) {
-    // If diagnosticsReporting is enabled, always report
-    if (settings.diagnosticsReporting == true) {
-        return true
-    }
-    
-    // If the entity is not in the map, always report
-    if (!ALL_ENTITIES.containsKey(objectId)) {
-        return true
-    }
-    
-    // Check if the entity is marked as diagnostic
-    def entityInfo = ALL_ENTITIES[objectId]
-    if (entityInfo?.isDiag != true) {
-        return true
-    }
-    
-    // Entity is diagnostic and reporting is disabled
-    return false
-}
 
 // Lifecycle methods
 
@@ -354,7 +268,8 @@ void parse(final Map message) {
 
     switch (message.type) {
         case 'device':
-            // Device information
+            // Device information - also handle ping response
+            handlePingResponse()
             break
 
         case 'entity':
@@ -452,10 +367,10 @@ void handleEntityState(Map message, Map entity, String objectId) {
             handlePreventSleepState(message)
             break
         case 'sen55_temperature':
-            handleTemperatureState(message, entity)
+            handleTemperatureState(message, entity, ALL_ENTITIES)
             break
         case 'sen55_humidity':
-            handleHumidityState(message, entity)
+            handleHumidityState(message, entity, ALL_ENTITIES)
             break
         case 'dps310_pressure':
             handlePressureState(message, entity)
@@ -484,7 +399,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
     
     String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
+    def entityInfo = getEntityInfo(ALL_ENTITIES, objectId)
     if (!entityInfo) {
         if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
         return
@@ -492,7 +407,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     
     String attributeName = entityInfo.attr
     String description = entityInfo.description
-    String unit = getEntityUnit(objectId)
+    String unit = getEntityUnit(ALL_ENTITIES, objectId)
     def rawValue = message.state
     def processedValue = rawValue
     String formattedValue = ""
@@ -521,7 +436,7 @@ private void handleGenericEntityState(Map message, Map entity) {
                     Float currentPref = settings.sen55HumidityOffset as Float
                     if (currentPref != processedValue) {
                         device.updateSetting('sen55HumidityOffset', processedValue)
-                        if (txtEnable && shouldReportDiagnostic(objectId)) { 
+                        if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) { 
                             log.info "SEN55 humidity offset preference synced from ESPHome to ${processedValue}%" 
                         }
                     }
@@ -529,7 +444,7 @@ private void handleGenericEntityState(Map message, Map entity) {
                     Float currentPref = settings.sen55TemperatureOffset as Float
                     if (currentPref != processedValue) {
                         device.updateSetting('sen55TemperatureOffset', processedValue)
-                        if (txtEnable && shouldReportDiagnostic(objectId)) { 
+                        if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) { 
                             log.info "SEN55 temperature offset preference synced from ESPHome to ${processedValue}°" 
                         }
                     }
@@ -594,7 +509,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
     
     // Send event if diagnostic reporting allows it
-    if (shouldReportDiagnostic(objectId)) {
+    if (shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) {
         Map eventData = [
             name: attributeName,
             value: (formattedValue ?: processedValue),
@@ -609,7 +524,7 @@ private void handleGenericEntityState(Map message, Map entity) {
     }
     
     // Only log if text logging is enabled AND diagnostic reporting allows it
-    if (txtEnable && shouldReportDiagnostic(objectId)) {
+    if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) {
         log.info "${description}: ${formattedValue} ${unit}".trim()
     }
 }
@@ -646,21 +561,7 @@ void cleanSen55(String value) {
     }
 }
 
-void espReboot(String value) {
-    def rebootKey = state.espRebootKey
-    
-    if (rebootKey == null) {
-        log.warn "ESP reboot entity not found"
-        return
-    }
-    
-    if (value == 'reboot') {
-        if (txtEnable) { log.info "${device} rebooting ESP32" }
-        espHomeButtonCommand(key: rebootKey)
-    } else {
-        log.warn "Unsupported ESP reboot value: ${value}"
-    }
-}
+
 
 
 
@@ -668,10 +569,10 @@ private void handlePreventSleepState(Map message) {
     // For switch entities, check for 'state' directly since they don't use 'hasState'
     if (message.state != null) {
         def sleepState = message.state as Boolean
-        if (shouldReportDiagnostic('prevent_sleep')) {
+        if (shouldReportDiagnostic(ALL_ENTITIES, 'prevent_sleep', settings.diagnosticsReporting)) {
             sendEvent(name: "preventSleep", value: sleepState ? 'on' : 'off', descriptionText: "Prevent Sleep is ${sleepState ? 'on' : 'off'}")
         }
-        if (txtEnable && shouldReportDiagnostic('prevent_sleep')) { 
+        if (txtEnable && shouldReportDiagnostic(ALL_ENTITIES, 'prevent_sleep', settings.diagnosticsReporting)) { 
             log.info "Prevent Sleep is ${sleepState ? 'on' : 'off'}" 
         }
     } else {
@@ -690,7 +591,7 @@ private void handlePressureState(Map message, Map entity) {
     }
     
     String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
+    def entityInfo = getEntityInfo(ALL_ENTITIES, objectId)
     if (!entityInfo) {
         if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
         return
@@ -731,7 +632,7 @@ private void handleCO2State(Map message, Map entity) {
     }
     
     String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
+    def entityInfo = getEntityInfo(ALL_ENTITIES, objectId)
     if (!entityInfo) {
         if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
         return
@@ -771,7 +672,7 @@ private void handleVocQualityState(Map message, Map entity) {
     }
     
     String objectId = entity.objectId
-    def entityInfo = getEntityInfo(objectId)
+    def entityInfo = getEntityInfo(ALL_ENTITIES, objectId)
     if (!entityInfo) {
         if (logEnable) { log.warn "No entity info found for objectId: ${objectId}" }
         return
