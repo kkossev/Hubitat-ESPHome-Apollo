@@ -1,6 +1,6 @@
 ## Apollo Automation PLT-1B Driver for Hubitat Elevation
 
-This driver connects your [Apollo Automation PLT-1B](https://apolloautomation.com/products/plt-1-ultimate-plant-sensor-for-home-assistant) sensor **directly to your HE hub** thanks to the great work done by Jonathan Bradshaw (@jonathanb) - the [ESPHome Hubitat Toolkit](https://github.com/bradsjm/hubitat-public/tree/main/ESPHome).
+This driver connects your [Apollo Automation PLT-1B](https://geni.us/plt1-plant-sensor) sensor **directly to your HE hub** thanks to the great work done by Jonathan Bradshaw (@jonathanb) - the [ESPHome Hubitat Toolkit](https://github.com/bradsjm/hubitat-public/tree/main/ESPHome).
 
 The driver can be installed using the community [Hubitat Package Manager](https://community.hubitat.com/t/release-hubitat-package-manager-hpm-hubitatcommunity/94471/1) app or manually as a Bundle archive from [GitHub](https://github.com/kkossev/Hubitat-ESPHome-Apollo).
 
@@ -51,9 +51,9 @@ The Apollo Automation PLT-1B is ideal for:
 
 |               |                 |
 |---------------|-----------------|
-| [![PLT-1B Main Device](https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/Images/apollo-plt1-hero.png?raw=true)](https://apolloautomation.com/products/plt-1-ultimate-plant-sensor-for-home-assistant) | **Apollo PLT-1(B) Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Battery-powered operation (rechargeable 18650 battery)<br/>• Soil Moisture: Capacitive sensor with conformal coating<br/>• Temperature: AHT20-F air sensor + optional DS18B20 soil probe<br/>• Light Monitoring: LTR390 UV and ambient light sensor<br/>• RGB LED indicator with customizable colors<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Humidity Range: 0-100% RH with ±2% accuracy<br/>• Up to 6 months battery life with sleep mode |
-| **Plant Monitoring Features:**<br/>• Soil moisture monitoring with capacitive sensor<br/>• Air temperature and humidity monitoring<br/>• Ambient light measurement (lux)<br/>• UV index monitoring for plant health<br/>• Optional soil temperature probe<br/>• Visual plant status with RGB LED<br/>• Automated watering alerts<br/>• Growth condition optimization | [![PLT-1B Dashboard](https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/Images/apollo-plt1-features.png?raw=true)](https://apolloautomation.com/products/plt-1-ultimate-plant-sensor-for-home-assistant) | 
-| [![DS18B20 Soil Probe](https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/Images/apollo-plt1-short-probe.png?raw=true)](https://apolloautomation.com/products/short-temperature-probe) | **Soil Temperature Probe Features:**<br/>• DS18B20 waterproof temperature sensor<br/>• Available in 20cm (~8in) and 1.5m (~5ft) lengths<br/>• Submersible and waterproof construction<br/>• Temperature Range: -55°C to +85°C (-67°F to +185°F)<br/>• ±0.5°C accuracy<br/>• OneWire protocol for reliable communication<br/>• Ideal for root zone temperature monitoring |
+| [![PLT-1B Main Device](https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/Images/apollo-plt1-hero.png?raw=true)](https://geni.us/plt1-plant-sensor) | **Apollo PLT-1(B) Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Battery-powered operation (rechargeable 18650 battery)<br/>• Soil Moisture: Capacitive sensor with conformal coating<br/>• Temperature: AHT20-F air sensor + optional DS18B20 soil probe<br/>• Light Monitoring: LTR390 UV and ambient light sensor<br/>• RGB LED indicator with customizable colors<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Humidity Range: 0-100% RH with ±2% accuracy<br/>• Up to 6 months battery life with sleep mode |
+| **Plant Monitoring Features:**<br/>• Soil moisture monitoring with capacitive sensor<br/>• Air temperature and humidity monitoring<br/>• Ambient light measurement (lux)<br/>• UV index monitoring for plant health<br/>• Optional soil temperature probe<br/>• Visual plant status with RGB LED<br/>• Automated watering alerts<br/>• Growth condition optimization | [![PLT-1B Dashboard](https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/Images/apollo-plt1-features.png?raw=true)](https://geni.us/plt1-plant-sensor) | 
+| [![DS18B20 Soil Probe](https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/Images/apollo-plt1-short-probe.png?raw=true)](https://geni.us/apollo-short-t-probe) | **Soil Temperature Probe Features:**<br/>• DS18B20 waterproof temperature sensor<br/>• Available in 20cm (~8in) and 1.5m (~5ft) lengths<br/>• Submersible and waterproof construction<br/>• Temperature Range: -55°C to +85°C (-67°F to +185°F)<br/>• ±0.5°C accuracy<br/>• OneWire protocol for reliable communication<br/>• Ideal for root zone temperature monitoring |
 
 
 -----
@@ -68,11 +68,7 @@ The Apollo Automation PLT-1B is ideal for:
 
 ## Driver Description
 
-
-### Major Attributes
-
 The Apollo Automation PLT-1B driver provides comprehensive plant monitoring and control capabilities with a dozen of available attributes. For everyday use, the driver displays only the essential attributes by default, keeping your device interface clean and focused. Advanced users can enable additional diagnostic attributes through the preferences when needed.
-
 
 #### Main Attributes
 - **`temperature`**: Primary temperature reading based on selected sensor preference (Air or Soil)
@@ -81,6 +77,7 @@ The Apollo Automation PLT-1B driver provides comprehensive plant monitoring and 
 - **`illuminance`**: Ambient light level in lux from LTR390 sensor
 - **`ultravioletIndex`**: UV index measurement from LTR390 sensor
 - **`networkStatus`**: Connection status ['connecting', 'online', 'offline']
+- **`online`**: Device online status from ESPHome ['true', 'false']
 - **`rgbLight`**: RGB LED control ['on', 'off']
 
 ### Advanced Attributes
@@ -97,12 +94,15 @@ These advanced attributes, disabled by default, provide additional insights and 
 | `illuminance` | number | Ambient light level (lux) |
 | `ultravioletIndex` | number | UV index measurement |
 | `networkStatus` | enum | Device connection status |
+| `online` | enum | Device online status from ESPHome |
 | `rgbLight` | enum | RGB LED control |
+| `rtt` | number | Round-trip time measurement (ms) |
 | `airTemperature` | number | AHT20-F air temperature sensor |
 | `soilTemperature` | number | DS18B20 soil temperature probe |
 | `airTemperatureOffset` | number | Air temperature calibration offset |
 | `airHumidityOffset` | number | Air humidity calibration offset |
 | `espTemperature` | number | ESP32 chip temperature |
+| `batteryVoltage` | number | Battery voltage measurement |
 | `soilAdc` | number | Raw soil sensor voltage |
 | `waterVoltage100` | number | 100% water voltage calibration |
 | `dryVoltage` | number | Dry soil voltage calibration |
@@ -111,39 +111,35 @@ These advanced attributes, disabled by default, provide additional insights and 
 | `preventSleep` | enum | Sleep prevention control |
 | `sleepDuration` | number | Sleep duration in minutes |
 | `selectedSensor` | string | Active temperature sensor selection |
+| `accessoryPower` | enum | Control for sensor power (PLT-1 only) |
+| `sleepAfterConnecting` | enum | PLT-1 sleep after connection control |
+| `firmwareUpdate` | string | Firmware update status |
+
+</details>
+
 ### Commands
 
-#### initialize() 
-- Establishes connection to the device and starts monitoring. Automatically called during device setup or manually from device commands.
-
-#### refresh()
-- Refreshes device information and clears cached data. Manually refresh device status and request updated information from the device.
-
-#### setRgbLight()
-- **Purpose**: Control the RGB LED indicator
-- **Parameters**: 
-  - `value`: LED state ['off', 'on']
-- **Usage**: `setRgbLight('on')` or `setRgbLight('off')`
+- **`initialize()`** - Establishes connection to the device and starts monitoring. Automatically called during device setup or manually from device commands.
+- **`refresh()`** - Refreshes device information and clears cached data. Manually refresh device status and request updated information from the device.
+- **`setRgbLight(value)`** - Control the RGB LED indicator. Parameters: `value` ['off', 'on']. Usage: `setRgbLight('on')` or `setRgbLight('off')`
+- **`espReboot(value)`** - Restart the ESP32 device. Parameters: `value` ['reboot']. Usage: `espReboot('reboot')`
+- **`ping(value)`** - Measure network round-trip time to device. Parameters: `value` ['ping']. Usage: `ping('ping')`. Updates `rtt` attribute with response time in milliseconds.
 
 
 ### Preferences
 
 #### Basic Settings
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `logEnable` | false | Enable debug logging for troubleshooting |
-| `txtEnable` | true | Enable descriptive text logging |
-| `ipAddress` | (required) | Device IP address for ESPHome API connection |
-| `temperaturePreference` | 'Air' | Select primary temperature sensor ['Air', 'Soil'] |
-| `airTemperatureOffset` | 0.0 | Air temperature calibration offset (-50° to +50°) |
-| `airHumidityOffset` | 0.0 | Air humidity calibration offset (-50% to +50%) |
+- **`logEnable`** (false) - Enable debug logging for troubleshooting
+- **`txtEnable`** (true) - Enable descriptive text logging  
+- **`ipAddress`** (required) - Device IP address for ESPHome API connection
+- **`temperaturePreference`** ('Air') - Select primary temperature sensor ['Air', 'Soil']
+- **`airTemperatureOffset`** (0.0) - Air temperature calibration offset (-50° to +50°)
+- **`airHumidityOffset`** (0.0) - Air humidity calibration offset (-50% to +50%)
 
 #### Advanced Options
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `password` | (optional) | Device password if required |
-| `diagnosticsReporting` | false | Enable reporting of diagnostic attributes |
-| `logWarnEnable` | true | Enable warning and info logging |
+- **`password`** (optional) - Device password if required
+- **`diagnosticsReporting`** (false) - Enable reporting of diagnostic attributes
+- **`logWarnEnable`** (true) - Enable warning and info logging
 
 ### More info on this driver
 
@@ -157,6 +153,7 @@ The driver uses an intelligent entity management system that:
 - **Handles missing entities** gracefully (device variants may not have all sensors)
 - **Provides diagnostic control** - technical attributes can be hidden from main device view
 - **Supports calibration** - offset values sync between Hubitat preferences and ESPHome
+- **Common Library Integration** - leverages the Apollo Common Library for shared functionality across all Apollo device drivers, ensuring consistent behavior and simplified maintenance
 
 ### Plant Monitoring
 
@@ -183,12 +180,15 @@ For battery-powered PLT-1B devices:
 - **Extended Battery Life**: Up to 6 months with optimized sleep settings
 - **Sleep Mode Support**: Configurable sleep duration to extend battery life
 - **Prevent Sleep Option**: Keep device awake for continuous monitoring when needed
+- **Battery Monitoring**: Battery voltage measurement and health tracking
 - **Power Monitoring**: Battery voltage and power management features
 
 ### Network Monitoring
 
 - **Connection Status**: Real-time online/offline status
 - **Signal Strength**: WiFi RSSI monitoring
+- **Round-Trip Time**: Measure network latency with ping command
+- **Enhanced Status**: Improved online/offline detection
 - **Automatic Reconnection**: Built-in ESPHome API reconnection logic
 
 ### Diagnostic Features
@@ -197,6 +197,8 @@ When diagnostic reporting is enabled:
 
 - **ESP32 Monitoring**: Internal chip temperature and performance
 - **Uptime Tracking**: Device restart and reliability monitoring
+- **Network Diagnostics**: Round-trip time monitoring and connection quality
+- **Enhanced Status Reporting**: Improved online/offline detection and reporting
 - **Configuration Access**: View advanced device settings
 - **Calibration Values**: View all sensor offset parameters
 - **Raw Sensor Data**: Access to soil ADC voltage and calibration thresholds
