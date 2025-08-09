@@ -30,7 +30,7 @@ import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
 @Field static final String DRIVER_VERSION =  '1.0.1'
-@Field static final String DATE_TIME_STAMP = '08/09/2025 12:00 PM'
+@Field static final String DATE_TIME_STAMP = '08/09/2025 1:10 PM'
 
 metadata {
     definition(
@@ -91,6 +91,7 @@ metadata {
 
         command 'calibrateScd40', [[name:'Calibrate CO2 to 420ppm', type: 'ENUM', constraints: ['calibrate']]]
         command 'cleanSen55', [[name:'Clean SEN55 sensor', type: 'ENUM', constraints: ['clean']]]
+        command 'refreshSensors', [[name:'Refresh Sensors Only', type: 'ENUM', constraints: ['refresh']]]
     }
 
     preferences {
@@ -494,7 +495,13 @@ private void handleGenericEntityState(Map message, Map entity) {
             
             // Only send event if threshold criteria met
             if (shouldReport && shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) {
-                String suffix = (reportReason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+                String suffix = ''
+                if (reportReason == 'max_interval') {
+                    suffix = ' [MaxReportingInterval]'
+                } else if (reportReason == 'refresh') {
+                    suffix = ' [Refresh]'
+                }
+                
                 Map eventData = [
                     name: attributeName,
                     value: (formattedValue ?: processedValue),
@@ -503,6 +510,11 @@ private void handleGenericEntityState(Map message, Map entity) {
                 
                 if (unit) {
                     eventData.unit = unit
+                }
+                
+                // Force state change when reporting due to max interval or refresh
+                if (reportReason == 'max_interval' || reportReason == 'refresh') {
+                    eventData.isStateChange = true
                 }
                 
                 sendEvent(eventData)
@@ -605,10 +617,6 @@ void cleanSen55(String value) {
     }
 }
 
-
-
-
-
 private void handlePreventSleepState(Map message) {
     // For switch entities, check for 'state' directly since they don't use 'hasState'
     if (message.state != null) {
@@ -650,16 +658,26 @@ private void handlePressureState(Map message, Map entity) {
     // Only report if threshold exceeded using universal method
     Map reportResult = shouldReportValue(objectId, attributeName, pressure)
     if (reportResult.shouldReport) {
-        String suffix = (reportResult.reason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+        String suffix = ''
+        if (reportResult.reason == 'max_interval') {
+            suffix = ' [MaxReportingInterval]'
+        } else if (reportResult.reason == 'refresh') {
+            suffix = ' [Refresh]'
+        }
+        boolean forceStateChange = (reportResult.reason == 'max_interval' || reportResult.reason == 'refresh')
         
         // Send individual sensor event
-        sendEvent(name: attributeName, value: pressureStr, unit: unit, descriptionText: "${description} is ${pressureStr} ${unit}${suffix}")
+        Map eventData1 = [name: attributeName, value: pressureStr, unit: unit, descriptionText: "${description} is ${pressureStr} ${unit}${suffix}"]
+        if (forceStateChange) eventData1.isStateChange = true
+        sendEvent(eventData1)
         
         // Also update main pressure attribute for Hubitat capability compatibility
-        sendEvent(name: "pressure", value: pressureStr, unit: unit, descriptionText: "Pressure is ${pressureStr} ${unit}${suffix}")
+        Map eventData2 = [name: "pressure", value: pressureStr, unit: unit, descriptionText: "Pressure is ${pressureStr} ${unit}${suffix}"]
+        if (forceStateChange) eventData2.isStateChange = true
+        sendEvent(eventData2)
         
         if (txtEnable) { 
-            log.info "${description} is ${pressureStr} ${unit}${suffix}" 
+            log.info "${description}: ${pressureStr} ${unit}${suffix}".trim()
         }
     }
 }
@@ -689,16 +707,26 @@ private void handleCO2State(Map message, Map entity) {
     // Only report if threshold exceeded using universal method
     Map reportResult = shouldReportValue(objectId, attributeName, co2)
     if (reportResult.shouldReport) {
-        String suffix = (reportResult.reason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+        String suffix = ''
+        if (reportResult.reason == 'max_interval') {
+            suffix = ' [MaxReportingInterval]'
+        } else if (reportResult.reason == 'refresh') {
+            suffix = ' [Refresh]'
+        }
+        boolean forceStateChange = (reportResult.reason == 'max_interval' || reportResult.reason == 'refresh')
         
         // Send individual sensor event
-        sendEvent(name: attributeName, value: co2, unit: unit, descriptionText: "${description} is ${co2} ${unit}${suffix}")
+        Map eventData1 = [name: attributeName, value: co2, unit: unit, descriptionText: "${description} is ${co2} ${unit}${suffix}"]
+        if (forceStateChange) eventData1.isStateChange = true
+        sendEvent(eventData1)
         
         // Also update main carbonDioxide attribute for Hubitat capability compatibility
-        sendEvent(name: "carbonDioxide", value: co2, unit: unit, descriptionText: "Carbon Dioxide is ${co2} ${unit}${suffix}")
+        Map eventData2 = [name: "carbonDioxide", value: co2, unit: unit, descriptionText: "Carbon Dioxide is ${co2} ${unit}${suffix}"]
+        if (forceStateChange) eventData2.isStateChange = true
+        sendEvent(eventData2)
         
         if (txtEnable) { 
-            log.info "${description} is ${co2} ${unit}${suffix}" 
+            log.info "${description}: ${co2} ${unit}${suffix}".trim()
         }
     }
 }
@@ -748,22 +776,28 @@ private void handleVocQualityState(Map message, Map entity) {
  * @return Map with 'shouldReport' boolean and 'reason' string
  */
 private Map shouldReportValue(String objectId, String attributeName, def newValue) {
+    // Check if we're in refresh mode - if so, always report
+    if (isInRefreshMode()) {
+        if (logEnable) log.debug "shouldReportValue(${objectId}): Refresh mode active"
+        return [shouldReport: true, reason: 'refresh']
+    }
+    
     def entityInfo = ALL_ENTITIES[objectId]
     if (!entityInfo?.thresholdPref) {
-        if (logEnable) log.debug "shouldReportValue(${objectId}): No threshold defined, reporting"
+        if (logEnable) log.debug "shouldReportValue(${objectId}): No threshold defined"
         return [shouldReport: true, reason: 'no_threshold']  // No threshold defined, always report
     }
     
     def currentState = device.currentState(attributeName)
     if (!currentState?.value) {
-        if (logEnable) log.debug "shouldReportValue(${objectId}): No previous value, reporting"
+        if (logEnable) log.debug "shouldReportValue(${objectId}): First value"
         return [shouldReport: true, reason: 'first_value']  // No previous value, always report first value
     }
     
     // Get threshold from preferences using the preference name
     def threshold = settings[entityInfo.thresholdPref]
     if (!threshold) {
-        if (logEnable) log.debug "shouldReportValue(${objectId}): No threshold set, reporting"
+        if (logEnable) log.debug "shouldReportValue(${objectId}): No threshold configured"
         return [shouldReport: true, reason: 'no_threshold_set']  // No threshold set, always report
     }
     
@@ -776,13 +810,13 @@ private Map shouldReportValue(String objectId, String attributeName, def newValu
         Integer prevVal = previousValue as Integer
         change = Math.abs(newVal - prevVal)
         threshold = threshold as Integer
-        if (logEnable) log.debug "shouldReportValue(${objectId}): Integer comparison - new:${newVal}, prev:${prevVal}, change:${change}, threshold:${threshold}"
+        //if (logEnable) log.debug "shouldReportValue(${objectId}): Δ${change} vs threshold ${threshold} (${newVal}←${prevVal})"
     } else {
         Float newVal = newValue as Float
         Float prevVal = previousValue as Float
         change = Math.abs(newVal - prevVal)
         threshold = threshold as Float
-        if (logEnable) log.debug "shouldReportValue(${objectId}): Float comparison - new:${newVal}, prev:${prevVal}, change:${change}, threshold:${threshold}"
+        //if (logEnable) log.debug "shouldReportValue(${objectId}): Δ${String.format('%.3f', change)} vs threshold ${threshold} (${String.format('%.3f', newVal)}←${String.format('%.3f', prevVal)})"
     }
     
     boolean thresholdMet = change >= threshold
@@ -800,7 +834,10 @@ private Map shouldReportValue(String objectId, String attributeName, def newValu
         }
     }
     
-    if (logEnable) log.debug "shouldReportValue(${objectId}): thresholdMet:${thresholdMet}, maxTimeMet:${maxTimeMet}, shouldReport:${shouldReport}, reason:${reason}"
+    // Only log when reporting or when explicitly debugging thresholds
+    if (logEnable && (shouldReport || change > (threshold * 0.5))) {
+        log.debug "shouldReportValue(${objectId}): ${shouldReport ? 'REPORTING' : 'suppressed'} - ${reason ?: 'below threshold'}"
+    }
     
     return [shouldReport: shouldReport, reason: reason]
 }
@@ -816,11 +853,14 @@ private boolean hasMaxTimeElapsed(String attributeName) {
     Long currentTime = now()
     
     if (!lastTime || (currentTime - lastTime) >= maxInterval) {
-        if (logEnable) log.debug "hasMaxTimeElapsed(${attributeName}): Max time elapsed - lastTime:${lastTime}, currentTime:${currentTime}, maxInterval:${maxInterval}ms, returning true"
+        //if (logEnable) log.debug "hasMaxTimeElapsed(${attributeName}): Max time reached (${Math.round((currentTime - (lastTime ?: 0))/1000)}s)"
         state.lastReported[attributeName] = currentTime
         return true
     }
-    if (logEnable) log.debug "hasMaxTimeElapsed(${attributeName}): Max time not elapsed - lastTime:${lastTime}, currentTime:${currentTime}, diff:${currentTime - lastTime}ms, maxInterval:${maxInterval}ms, returning false"
+    // Only log when close to max time (last 10 seconds) to reduce spam
+    if (logEnable && (currentTime - lastTime) > (maxInterval - 10000)) {
+        //log.debug "hasMaxTimeElapsed(${attributeName}): ${Math.round((maxInterval - (currentTime - lastTime))/1000)}s remaining"
+    }
     return false
 }
 

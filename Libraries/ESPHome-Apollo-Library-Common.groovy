@@ -108,14 +108,14 @@ void setRgbLight(String value = null) {
         def currentState = device.currentState('rgbLight')
         String currentValue = currentState?.value
         value = (currentValue == 'on') ? 'off' : 'on'
-        if (txtEnable) { log.info "${device} RGB light toggling from ${currentValue} to ${value}" }
+        if (settings?.txtEnable) { log.info "${device} RGB light toggling from ${currentValue} to ${value}" }
     }
     
     if (value == 'on') {
-        if (txtEnable) { log.info "${device} RGB light on" }
+        if (settings?.txtEnable) { log.info "${device} RGB light on" }
         espHomeLightCommand(key: lightKey, state: true)
     } else if (value == 'off') {
-        if (txtEnable) { log.info "${device} RGB light off" }
+        if (settings?.txtEnable) { log.info "${device} RGB light off" }
         espHomeLightCommand(key: lightKey, state: false)
     } else {
         log.warn "Unsupported RGB light value: ${value}"
@@ -131,7 +131,7 @@ void handleRgbLightState(Map message) {
     if (message.state != null) {
         def rgbLightState = message.state as Boolean
         sendEvent(name: "rgbLight", value: rgbLightState ? 'on' : 'off', descriptionText: "RGB Light is ${rgbLightState ? 'on' : 'off'}")
-        if (txtEnable) { log.info "RGB Light is ${rgbLightState ? 'on' : 'off'}" }
+        if (settings?.txtEnable) { log.info "RGB Light is ${rgbLightState ? 'on' : 'off'}" }
     } else {
         if (logEnable) { log.warn "RGB light message does not contain state: ${message}" }
     }
@@ -170,7 +170,11 @@ void handleTemperatureState(Map message, Map entity, Map entitiesMap) {
     if (this.respondsTo('shouldReportValue')) {
         Map reportResult = shouldReportValue(objectId, attributeName, temp)
         shouldReport = reportResult.shouldReport
-        suffix = (reportResult.reason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+        if (reportResult.reason == 'max_interval') {
+            suffix = ' [MaxReportingInterval]'
+        } else if (reportResult.reason == 'refresh') {
+            suffix = ' [Refresh]'
+        }
     } else {
         // Fallback: only report if the formatted value has changed
         def currentTempState = device.currentState(attributeName)
@@ -179,13 +183,19 @@ void handleTemperatureState(Map message, Map entity, Map entitiesMap) {
     }
     
     if (shouldReport && shouldReportDiagnostic(entitiesMap, objectId, settings.diagnosticsReporting)) {
+        boolean forceStateChange = suffix.contains('[MaxReportingInterval]') || suffix.contains('[Refresh]')
+        
         // Send individual sensor event
-        sendEvent(name: attributeName, value: tempStr, unit: unit, descriptionText: "${description} is ${tempStr} ${unit}${suffix}")
+        Map eventData1 = [name: attributeName, value: tempStr, unit: unit, descriptionText: "${description} is ${tempStr} ${unit}${suffix}"]
+        if (forceStateChange) eventData1.isStateChange = true
+        sendEvent(eventData1)
         
         // Also update main temperature attribute for Hubitat capability compatibility
-        sendEvent(name: "temperature", value: tempStr, unit: unit, descriptionText: "Temperature is ${tempStr} ${unit}${suffix}")
+        Map eventData2 = [name: "temperature", value: tempStr, unit: unit, descriptionText: "Temperature is ${tempStr} ${unit}${suffix}"]
+        if (forceStateChange) eventData2.isStateChange = true
+        sendEvent(eventData2)
         
-        if (txtEnable) { 
+        if (settings?.txtEnable) { 
             log.info "${description} is ${tempStr} ${unit}${suffix}" 
         }
     }
@@ -223,7 +233,11 @@ void handleHumidityState(Map message, Map entity, Map entitiesMap) {
     if (this.respondsTo('shouldReportValue')) {
         Map reportResult = shouldReportValue(objectId, attributeName, humidity)
         shouldReport = reportResult.shouldReport
-        suffix = (reportResult.reason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+        if (reportResult.reason == 'max_interval') {
+            suffix = ' [MaxReportingInterval]'
+        } else if (reportResult.reason == 'refresh') {
+            suffix = ' [Refresh]'
+        }
     } else {
         // Fallback: only report if the formatted value has changed
         def currentHumidityState = device.currentState(attributeName)
@@ -232,13 +246,19 @@ void handleHumidityState(Map message, Map entity, Map entitiesMap) {
     }
     
     if (shouldReport && shouldReportDiagnostic(entitiesMap, objectId, settings.diagnosticsReporting)) {
+        boolean forceStateChange = suffix.contains('[MaxReportingInterval]') || suffix.contains('[Refresh]')
+        
         // Send individual sensor event
-        sendEvent(name: attributeName, value: humidityStr, unit: unit, descriptionText: "${description} is ${humidityStr} ${unit}${suffix}")
+        Map eventData1 = [name: attributeName, value: humidityStr, unit: unit, descriptionText: "${description} is ${humidityStr} ${unit}${suffix}"]
+        if (forceStateChange) eventData1.isStateChange = true
+        sendEvent(eventData1)
         
         // Also update main humidity attribute for Hubitat capability compatibility
-        sendEvent(name: "humidity", value: humidityStr, unit: unit, descriptionText: "Humidity is ${humidityStr} ${unit}${suffix}")
+        Map eventData2 = [name: "humidity", value: humidityStr, unit: unit, descriptionText: "Humidity is ${humidityStr} ${unit}${suffix}"]
+        if (forceStateChange) eventData2.isStateChange = true
+        sendEvent(eventData2)
         
-        if (txtEnable) { 
+        if (settings?.txtEnable) { 
             log.info "${description} is ${humidityStr} ${unit}${suffix}" 
         }
     }
@@ -283,6 +303,60 @@ void refresh() {
     state.clear()
     state.requireRefresh = true
     espHomeDeviceInfoRequest()
+}
+
+/**
+ * Refresh sensors only - enables 5-second sensor reporting window without clearing state
+ */
+void refreshSensors(String value = 'refresh') {
+    if (value == 'refresh') {
+        if (settings?.logEnable) log.debug "refreshSensors() called - enabling 5-second sensor refresh window"
+        
+        // Enhanced refresh: enable 5-second sensor reporting window
+        state.refreshMode = true
+        state.refreshTimestamp = now()
+        
+        // Schedule to disable refresh mode after 5 seconds
+        runIn(5, 'disableRefreshMode')
+        
+        // Safe check for txtEnable setting
+        if (settings?.txtEnable) log.info "Sensor refresh: reporting restrictions lifted for 5 seconds"
+    } else {
+        log.warn "Unsupported refresh sensors value: ${value}"
+    }
+}
+
+/**
+ * Disable refresh mode after the 5-second window
+ */
+void disableRefreshMode() {
+    state.refreshMode = false
+    state.remove('refreshTimestamp')
+    if (settings?.logEnable) log.debug "Refresh mode disabled - normal sensor reporting thresholds restored"
+}
+
+/**
+ * Check if we're currently in refresh mode (within 5 seconds of refresh() call)
+ */
+boolean isInRefreshMode() {
+    if (!state.refreshMode || !state.refreshTimestamp) {
+        if (settings?.logEnable) log.debug "isInRefreshMode(): Not in refresh mode - refreshMode:${state.refreshMode}, timestamp:${state.refreshTimestamp}"
+        return false
+    }
+    
+    long timeSinceRefresh = now() - state.refreshTimestamp
+    boolean inRefreshWindow = timeSinceRefresh < 5000 // 5 seconds in milliseconds
+    
+    if (settings?.logEnable) log.debug "isInRefreshMode(): timeSinceRefresh:${timeSinceRefresh}ms, inWindow:${inRefreshWindow}"
+    
+    if (!inRefreshWindow && state.refreshMode) {
+        // Auto-disable if we missed the scheduled disable
+        if (settings?.logEnable) log.debug "isInRefreshMode(): Window expired, auto-disabling refresh mode"
+        disableRefreshMode()
+        return false
+    }
+    
+    return inRefreshWindow
 }
 
 /**
@@ -393,7 +467,7 @@ void espReboot(String value) {
     }
     
     if (value == 'reboot') {
-        if (txtEnable) { log.info "${device} rebooting ESP32" }
+        if (settings?.txtEnable) { log.info "${device} rebooting ESP32" }
         espHomeButtonCommand(key: rebootKey)
     } else {
         log.warn "Unsupported ESP reboot value: ${value}"
@@ -414,7 +488,7 @@ void ping(String value = 'ping') {
     // Record the start time for RTT measurement
     state.pingStartTime = now()
     
-    if (txtEnable) { log.info "${device} sending ping to measure RTT" }
+    if (settings?.txtEnable) { log.info "${device} sending ping to measure RTT" }
     
     // Send a harmless device info request - all ESPHome devices support this
     espHomeDeviceInfoRequest()
@@ -432,7 +506,7 @@ void handlePingResponse() {
         // Send RTT event
         sendEvent(name: "rtt", value: rttMs, unit: "ms", descriptionText: "Round-trip time is ${rttMs} ms")
         
-        if (txtEnable) { 
+        if (settings?.txtEnable) { 
             log.info "Ping response received - RTT: ${rttMs} ms" 
         }
     }
@@ -458,7 +532,7 @@ void checkDriverVersion(String driverVersion, String dateTimeStamp, Boolean debu
     String versionString = "${driverVersion} ${dateTimeStamp} ${debugSuffix} (${getHubVersion()} ${location.hub.firmwareVersionString})"
     
     if (state.driverVersion == null || versionString != state.driverVersion) {
-        if (txtEnable) { 
+        if (settings?.txtEnable) { 
             log.info "checkDriverVersion: updating the settings from the current driver version ${state.driverVersion} to the new version ${versionString}" 
         }
         state.driverVersion = versionString

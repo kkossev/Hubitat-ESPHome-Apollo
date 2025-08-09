@@ -58,13 +58,13 @@
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Apollo AIR-1.groovy",
       "codeType": "driver",
       "id": 4161,
-      "version": 39
+      "version": 49
     },
     {
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Libraries/ESPHome-Apollo-Library-Common.groovy",
       "codeType": "library",
       "id": 196,
-      "version": 28
+      "version": 38
     }
   ]
 }
