@@ -46,7 +46,7 @@
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Apollo PLT-1B.groovy",
       "codeType": "driver",
       "id": 4095,
-      "version": 36
+      "version": 37
     },
     {
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Libraries/ESPHome-API-Library-KK-mod.groovy",
@@ -58,13 +58,13 @@
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Apollo AIR-1.groovy",
       "codeType": "driver",
       "id": 4161,
-      "version": 24
+      "version": 39
     },
     {
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Libraries/ESPHome-Apollo-Library-Common.groovy",
       "codeType": "library",
       "id": 196,
-      "version": 27
+      "version": 28
     }
   ]
 }

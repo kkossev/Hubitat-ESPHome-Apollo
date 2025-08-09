@@ -55,7 +55,7 @@ The Apollo Automation AIR-1 is ideal for:
 
 |               |                 |
 |---------------|-----------------|
-| [![AIR-1 Main Device](https://apolloautomation.com/cdn/shop/files/AIR-1_Hero.png?v=1742996496&width=960)](https://geni.us/apollo-air-1) | **Apollo AIR-1 Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Mains-powered operation (USB-C 5V)<br/>• SEN55 Multi-Sensor: PM1/PM2.5/PM4/PM10, VOC, NOx, Temperature, Humidity<br/>• ENS160 Gas Sensor: CO, NH₃, Ethanol, H₂, CH₄, NO₂<br/>• SCD40 CO₂ Sensor: 400-40,000 ppm NDIR detection<br/>• DPS310 Pressure Sensor: Barometric pressure monitoring<br/>• RGB LED indicator with air quality status colors<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Comprehensive air quality monitoring for smart homes |
+| [![AIR-1 Main Device](https://apolloautomation.com/cdn/shop/files/AIR-1_Main_Shop.png)](https://geni.us/apollo-air-1) | **Apollo AIR-1 Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Mains-powered operation (USB-C 5V)<br/>• SEN55 Multi-Sensor: PM1/PM2.5/PM4/PM10, VOC, NOx, Temperature, Humidity<br/>• ENS160 Gas Sensor: CO, NH₃, Ethanol, H₂, CH₄, NO₂<br/>• SCD40 CO₂ Sensor: 400-40,000 ppm NDIR detection<br/>• DPS310 Pressure Sensor: Barometric pressure monitoring<br/>• RGB LED indicator with air quality status colors<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Comprehensive air quality monitoring for smart homes |
 
 -----
 

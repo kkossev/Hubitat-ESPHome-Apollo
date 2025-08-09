@@ -21,6 +21,7 @@
  *  SOFTWARE.
  *
  *  ver. 1.0.0  2025-07-12 kkossev  - first beta version based on PLT-1B driver, using the common apollo library.
+ *  ver. 1.0.1  2025-08-09 kkossev  - added thresholds for sensor changes
  * 
  *                         TODO: add driver version
 */
@@ -28,8 +29,8 @@
 import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
-@Field static final String DRIVER_VERSION =  '1.0.0'
-@Field static final String DATE_TIME_STAMP = '07/12/2025 10:54 PM'
+@Field static final String DRIVER_VERSION =  '1.0.1'
+@Field static final String DATE_TIME_STAMP = '08/09/2025 12:00 PM'
 
 metadata {
     definition(
@@ -98,41 +99,52 @@ metadata {
         input name: 'ipAddress', type: 'text', title: 'Device IP Address', required: true    // required setting for API library
         input name: 'sen55TemperatureOffset', type: 'decimal', title: 'SEN55 Temperature Offset (°)', required: false, defaultValue: 0.0, range: '-70..70', description: 'Calibration offset for SEN55 temperature sensor'
         input name: 'sen55HumidityOffset', type: 'decimal', title: 'SEN55 Humidity Offset (%)', required: false, defaultValue: 0.0, range: '-70..70', description: 'Calibration offset for SEN55 humidity sensor'
-        input name: 'sleepDuration', type: 'number', title: 'Sleep Duration (minutes)', required: false, defaultValue: 5, range: '0..800', description: 'Time between measurements when in sleep mode'
+
+        input name: 'maxReportingInterval', type: 'number', title: 'Maximum Reporting Interval (seconds)', required: false, defaultValue: 1800, range: '60..14400', description: 'Maximum time between sensor reports, even if threshold not met (default: 30 minutes)'
+        input name: 'temperatureChangeThreshold', type: 'decimal', title: 'Temperature Change Threshold (°)', required: false, defaultValue: 0.3, range: '0..2', description: 'Minimum temperature change to report (default: 0.3°)'
+        input name: 'humidityChangeThreshold', type: 'decimal', title: 'Humidity Change Threshold (%)', required: false, defaultValue: 1.0, range: '0..5', description: 'Minimum humidity change to report (default: 1.0%)'
+        input name: 'pmChangeThreshold', type: 'decimal', title: 'PM Sensor Change Threshold (µg/m³)', required: false, defaultValue: 0.5, range: '0..2', description: 'Minimum PM concentration change to report (default: 0.5 µg/m³)'
+        input name: 'co2ChangeThreshold', type: 'number', title: 'CO₂ Change Threshold (ppm)', required: false, defaultValue: 10, range: '5..50', description: 'Minimum CO₂ change to report (default: 10 ppm)'
+        input name: 'pressureChangeThreshold', type: 'decimal', title: 'Pressure Change Threshold (hPa)', required: false, defaultValue: 0.5, range: '0..2', description: 'Minimum pressure change to report (default: 0.5 hPa)'
+        input name: 'vocNoxChangeThreshold', type: 'number', title: 'VOC/NOx Index Change Threshold', required: false, defaultValue: 2, range: '1..10', description: 'Minimum VOC/NOx index change to report (default: 2)'
+        input name: 'gasChangeThreshold', type: 'decimal', title: 'Gas Sensor Change Threshold (ppb)', required: false, defaultValue: 5.0, range: '1..20', description: 'Minimum gas concentration change to report (default: 5 ppb)'
         input name: 'advancedOptions', type: 'bool', title: '<b>Advanced Options</b>', description: 'Flip to see or hide the advanced options', defaultValue: false
+
         if (advancedOptions == true) {
-            input name: 'password', type: 'text', title: 'Device Password <i>(if required)</i>', required: false     // optional setting for API library
+            input name: 'password', type: 'text', title: 'Device Password <i>(if required)</i>', required: false
             input name: 'diagnosticsReporting', type: 'bool', title: 'Enable Diagnostic Attributes', required: false, defaultValue: false, description: 'Enable reporting of technical diagnostic attributes (advanced users only)'
+            input name: 'sleepDuration', type: 'number', title: 'Sleep Duration (minutes)', required: false, defaultValue: 5, range: '0..800', description: 'Time between measurements when in sleep mode'
             input name: 'logWarnEnable', type: 'bool', title: 'Enable warning logging', required: false, defaultValue: false, description: '<i>Enables API Library warnings and info logging.</i>'
+            
         }
     }
 }
 
 @Field static final Map<String, Map<String, Object>> ALL_ENTITIES = [
     // Primary sensors (always enabled)
-    'ammonia':                             [attr: 'ammonia',                        isDiag: false, type: 'sensor',      description: 'Ammonia (NH₃) gas sensor'],
-    'carbon_monoxide':                     [attr: 'carbonMonoxide',                 isDiag: false, type: 'sensor',      description: 'Carbon Monoxide (CO) gas sensor'],
-    'co2':                                 [attr: 'carbonDioxide',                  isDiag: false, type: 'sensor',      description: 'Carbon Dioxide (CO₂) sensor (SCD40)'],
-    'dps310_pressure':                     [attr: 'dps310Pressure',                 isDiag: true,  type: 'pressure',    description: 'DPS310 air pressure sensor'],
-    'ethanol':                             [attr: 'ethanol',                        isDiag: false, type: 'sensor',      description: 'Ethanol (C₂H₅OH) gas sensor'],
-    'hydrogen':                            [attr: 'hydrogen',                       isDiag: false, type: 'sensor',      description: 'Hydrogen (H₂) gas sensor'],
-    'methane':                             [attr: 'methane',                        isDiag: false, type: 'sensor',      description: 'Methane (CH₄) gas sensor'],
-    'nitrogen_dioxide':                    [attr: 'nitrogenDioxide',                isDiag: false, type: 'sensor',      description: 'Nitrogen Dioxide (NO₂) gas sensor'],
-    'pm__1_m_weight_concentration':        [attr: 'pm1',                            isDiag: false, type: 'sensor',      description: 'PM <1µm weight concentration'],
-    'pm__2_5_m_weight_concentration':      [attr: 'pm25',                           isDiag: false, type: 'sensor',      description: 'PM <2.5µm weight concentration'],
-    'pm__4_m_weight_concentration':        [attr: 'pm4',                            isDiag: false, type: 'sensor',      description: 'PM <4µm weight concentration'],
-    'pm__10_m_weight_concentration':       [attr: 'pm10',                           isDiag: false, type: 'sensor',      description: 'PM <10µm weight concentration'],
-    'sen55_humidity':                      [attr: 'sen55Humidity',                  isDiag: true,  type: 'sensor',      description: 'SEN55 humidity sensor'],
-    'sen55_nox':                           [attr: 'sen55Nox',                       isDiag: false, type: 'sensor',      description: 'SEN55 NOX index'],
-    'sen55_temperature':                   [attr: 'sen55Temperature',               isDiag: true,  type: 'temperature', description: 'SEN55 temperature sensor'],
-    'sen55_voc':                           [attr: 'sen55Voc',                       isDiag: false, type: 'sensor',      description: 'SEN55 VOC index'],
+    'ammonia':                             [attr: 'ammonia',                        isDiag: false, type: 'sensor',      description: 'Ammonia (NH₃) gas sensor',                      thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
+    'carbon_monoxide':                     [attr: 'carbonMonoxide',                 isDiag: false, type: 'sensor',      description: 'Carbon Monoxide (CO) gas sensor',               thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
+    'co2':                                 [attr: 'carbonDioxide',                  isDiag: false, type: 'sensor',      description: 'Carbon Dioxide (CO₂) sensor (SCD40)',           thresholdPref: 'co2ChangeThreshold',        dataType: 'integer'],
+    'dps310_pressure':                     [attr: 'dps310Pressure',                 isDiag: true,  type: 'pressure',    description: 'DPS310 air pressure sensor',                    thresholdPref: 'pressureChangeThreshold',   dataType: 'float'],
+    'ethanol':                             [attr: 'ethanol',                        isDiag: false, type: 'sensor',      description: 'Ethanol (C₂H₅OH) gas sensor',                   thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
+    'hydrogen':                            [attr: 'hydrogen',                       isDiag: false, type: 'sensor',      description: 'Hydrogen (H₂) gas sensor',                      thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
+    'methane':                             [attr: 'methane',                        isDiag: false, type: 'sensor',      description: 'Methane (CH₄) gas sensor',                      thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
+    'nitrogen_dioxide':                    [attr: 'nitrogenDioxide',                isDiag: false, type: 'sensor',      description: 'Nitrogen Dioxide (NO₂) gas sensor',             thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
+    'pm__1_m_weight_concentration':        [attr: 'pm1',                            isDiag: false, type: 'sensor',      description: 'PM <1µm weight concentration',                   thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
+    'pm__2_5_m_weight_concentration':      [attr: 'pm25',                           isDiag: false, type: 'sensor',      description: 'PM <2.5µm weight concentration',                 thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
+    'pm__4_m_weight_concentration':        [attr: 'pm4',                            isDiag: false, type: 'sensor',      description: 'PM <4µm weight concentration',                   thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
+    'pm__10_m_weight_concentration':       [attr: 'pm10',                           isDiag: false, type: 'sensor',      description: 'PM <10µm weight concentration',                  thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
+    'sen55_humidity':                      [attr: 'sen55Humidity',                  isDiag: false, type: 'sensor',      description: 'SEN55 humidity sensor',                         thresholdPref: 'humidityChangeThreshold',   dataType: 'float'],
+    'sen55_nox':                           [attr: 'sen55Nox',                       isDiag: false, type: 'sensor',      description: 'SEN55 NOX index',                               thresholdPref: 'vocNoxChangeThreshold',     dataType: 'integer'],
+    'sen55_temperature':                   [attr: 'sen55Temperature',               isDiag: false, type: 'temperature', description: 'SEN55 temperature sensor',                      thresholdPref: 'temperatureChangeThreshold', dataType: 'float'],
+    'sen55_voc':                           [attr: 'sen55Voc',                       isDiag: false, type: 'sensor',      description: 'SEN55 VOC index',                               thresholdPref: 'vocNoxChangeThreshold',     dataType: 'integer'],
     'voc_quality':                         [attr: 'vocQuality',                     isDiag: false, type: 'text',        description: 'VOC quality rating'],
     
     // Detailed PM sensors (disabled by default in ESPHome)
-    'pm_0_3_to_1__m':                      [attr: 'pm03To1',                        isDiag: true,  type: 'sensor',      description: 'PM 0.3 to 1 µm concentration'],
-    'pm_1_to_2_5__m':                      [attr: 'pm1To25',                        isDiag: true,  type: 'sensor',      description: 'PM 1 to 2.5 µm concentration'],
-    'pm_2_5_to_4__m':                      [attr: 'pm25To4',                        isDiag: true,  type: 'sensor',      description: 'PM 2.5 to 4 µm concentration'],
-    'pm_4_to_10__m':                       [attr: 'pm4To10',                        isDiag: true,  type: 'sensor',      description: 'PM 4 to 10 µm concentration'],
+    'pm_0_3_to_1__m':                      [attr: 'pm03To1',                        isDiag: true,  type: 'sensor',      description: 'PM 0.3 to 1 µm concentration',                  thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
+    'pm_1_to_2_5__m':                      [attr: 'pm1To25',                        isDiag: true,  type: 'sensor',      description: 'PM 1 to 2.5 µm concentration',                  thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
+    'pm_2_5_to_4__m':                      [attr: 'pm25To4',                        isDiag: true,  type: 'sensor',      description: 'PM 2.5 to 4 µm concentration',                  thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
+    'pm_4_to_10__m':                       [attr: 'pm4To10',                        isDiag: true,  type: 'sensor',      description: 'PM 4 to 10 µm concentration',                   thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
     
     // Controls
     'rgb_light':                           [attr: 'rgbLight',                       isDiag: false, type: 'light',       description: 'RGB status light control'],
@@ -375,10 +387,10 @@ void handleEntityState(Map message, Map entity, String objectId) {
         case 'dps310_pressure':
             handlePressureState(message, entity)
             break
-        case 'co2':
+        case 'co2': 
             handleCO2State(message, entity)
             break
-        case 'voc_quality':
+        case 'voc_quality': 
             handleVocQualityState(message, entity)
             break
         default:
@@ -460,15 +472,47 @@ private void handleGenericEntityState(Map message, Map entity) {
             
         case 'sensor':
             processedValue = rawValue as Float
-            // Use appropriate precision based on sensor type
-            if (unit == 'ppm') {
+            
+            // Apply universal threshold filtering
+            Map reportResult = shouldReportValue(objectId, attributeName, processedValue)
+            boolean shouldReport = reportResult.shouldReport
+            String reportReason = reportResult.reason
+            
+            // Format value based on unit type
+            if (unit == 'µg/m³') {  // PM sensors
+                formattedValue = String.format("%.1f", processedValue)
+            } else if (unit == 'ppm' && objectId != 'co2') {  // Gas sensors (not CO2)
                 formattedValue = String.format("%.2f", processedValue)
-            } else if (unit == 'µg/m³') {
+            } else if (objectId.contains('voc') || objectId.contains('nox')) {  // VOC/NOx indices
+                Integer indexValue = Math.round(processedValue) as Integer
+                formattedValue = indexValue.toString()
+            } else if (objectId.contains('humidity')) {  // Humidity sensors
                 formattedValue = String.format("%.1f", processedValue)
             } else {
-                formattedValue = String.format("%.0f", processedValue)  // For indices and counts
+                formattedValue = String.format("%.0f", processedValue)  // For other indices
             }
-            break
+            
+            // Only send event if threshold criteria met
+            if (shouldReport && shouldReportDiagnostic(ALL_ENTITIES, objectId, settings.diagnosticsReporting)) {
+                String suffix = (reportReason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+                Map eventData = [
+                    name: attributeName,
+                    value: (formattedValue ?: processedValue),
+                    descriptionText: "${description} is ${formattedValue} ${unit}${suffix}".trim()
+                ]
+                
+                if (unit) {
+                    eventData.unit = unit
+                }
+                
+                sendEvent(eventData)
+                
+                // Only log if text logging is enabled
+                if (txtEnable) {
+                    log.info "${description}: ${formattedValue} ${unit}${suffix}".trim()
+                }
+            }
+            return  // Exit early to avoid duplicate processing
             
         case 'config':
             if (unit.contains('°')) {  // Temperature config
@@ -601,22 +645,21 @@ private void handlePressureState(Map message, Map entity) {
     String pressureStr = String.format("%.1f", pressure)
     String attributeName = entityInfo.attr
     String description = entityInfo.description
-    String unit = "hPa"  // Unit from ESPHome
+    String unit = "hPa"
     
-    // Get the previous pressure value
-    def currentPressureState = device.currentState(attributeName)
-    String previousValue = currentPressureState?.value
-    
-    // Only send event and log if the value has changed
-    if (previousValue != pressureStr) {
+    // Only report if threshold exceeded using universal method
+    Map reportResult = shouldReportValue(objectId, attributeName, pressure)
+    if (reportResult.shouldReport) {
+        String suffix = (reportResult.reason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+        
         // Send individual sensor event
-        sendEvent(name: attributeName, value: pressureStr, unit: unit, descriptionText: "${description} is ${pressureStr} ${unit}")
+        sendEvent(name: attributeName, value: pressureStr, unit: unit, descriptionText: "${description} is ${pressureStr} ${unit}${suffix}")
         
         // Also update main pressure attribute for Hubitat capability compatibility
-        sendEvent(name: "pressure", value: pressureStr, unit: unit, descriptionText: "Pressure is ${pressureStr} ${unit}")
+        sendEvent(name: "pressure", value: pressureStr, unit: unit, descriptionText: "Pressure is ${pressureStr} ${unit}${suffix}")
         
         if (txtEnable) { 
-            log.info "${description} is ${pressureStr} ${unit}" 
+            log.info "${description} is ${pressureStr} ${unit}${suffix}" 
         }
     }
 }
@@ -643,20 +686,19 @@ private void handleCO2State(Map message, Map entity) {
     String description = entityInfo.description
     String unit = "ppm"
     
-    // Get the previous CO2 value
-    def currentCO2State = device.currentState(attributeName)
-    String previousValue = currentCO2State?.value
-    
-    // Only send event and log if the value has changed
-    if (previousValue != co2.toString()) {
+    // Only report if threshold exceeded using universal method
+    Map reportResult = shouldReportValue(objectId, attributeName, co2)
+    if (reportResult.shouldReport) {
+        String suffix = (reportResult.reason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+        
         // Send individual sensor event
-        sendEvent(name: attributeName, value: co2, unit: unit, descriptionText: "${description} is ${co2} ${unit}")
+        sendEvent(name: attributeName, value: co2, unit: unit, descriptionText: "${description} is ${co2} ${unit}${suffix}")
         
         // Also update main carbonDioxide attribute for Hubitat capability compatibility
-        sendEvent(name: "carbonDioxide", value: co2, unit: unit, descriptionText: "Carbon Dioxide is ${co2} ${unit}")
+        sendEvent(name: "carbonDioxide", value: co2, unit: unit, descriptionText: "Carbon Dioxide is ${co2} ${unit}${suffix}")
         
         if (txtEnable) { 
-            log.info "${description} is ${co2} ${unit}" 
+            log.info "${description} is ${co2} ${unit}${suffix}" 
         }
     }
 }
@@ -694,6 +736,92 @@ private void handleVocQualityState(Map message, Map entity) {
             log.info "${description} is ${vocQuality}" 
         }
     }
+}
+
+// Add these methods before the existing handler methods:
+
+/**
+ * Universal threshold checking method that uses preference names from ALL_ENTITIES
+ * @param objectId The ESPHome object ID to get threshold info for
+ * @param attributeName The Hubitat attribute name
+ * @param newValue The new sensor value
+ * @return Map with 'shouldReport' boolean and 'reason' string
+ */
+private Map shouldReportValue(String objectId, String attributeName, def newValue) {
+    def entityInfo = ALL_ENTITIES[objectId]
+    if (!entityInfo?.thresholdPref) {
+        if (logEnable) log.debug "shouldReportValue(${objectId}): No threshold defined, reporting"
+        return [shouldReport: true, reason: 'no_threshold']  // No threshold defined, always report
+    }
+    
+    def currentState = device.currentState(attributeName)
+    if (!currentState?.value) {
+        if (logEnable) log.debug "shouldReportValue(${objectId}): No previous value, reporting"
+        return [shouldReport: true, reason: 'first_value']  // No previous value, always report first value
+    }
+    
+    // Get threshold from preferences using the preference name
+    def threshold = settings[entityInfo.thresholdPref]
+    if (!threshold) {
+        if (logEnable) log.debug "shouldReportValue(${objectId}): No threshold set, reporting"
+        return [shouldReport: true, reason: 'no_threshold_set']  // No threshold set, always report
+    }
+    
+    def previousValue = currentState.value
+    def change
+    
+    // Calculate change based on data type
+    if (entityInfo.dataType == 'integer') {
+        Integer newVal = Math.round(newValue as Float) as Integer
+        Integer prevVal = previousValue as Integer
+        change = Math.abs(newVal - prevVal)
+        threshold = threshold as Integer
+        if (logEnable) log.debug "shouldReportValue(${objectId}): Integer comparison - new:${newVal}, prev:${prevVal}, change:${change}, threshold:${threshold}"
+    } else {
+        Float newVal = newValue as Float
+        Float prevVal = previousValue as Float
+        change = Math.abs(newVal - prevVal)
+        threshold = threshold as Float
+        if (logEnable) log.debug "shouldReportValue(${objectId}): Float comparison - new:${newVal}, prev:${prevVal}, change:${change}, threshold:${threshold}"
+    }
+    
+    boolean thresholdMet = change >= threshold
+    boolean maxTimeMet = hasMaxTimeElapsed(attributeName)
+    
+    // Report if threshold met OR maximum time elapsed
+    boolean shouldReport = thresholdMet || maxTimeMet
+    String reason
+    
+    if (shouldReport) {
+        if (thresholdMet) {
+            reason = 'threshold'
+        } else if (maxTimeMet) {
+            reason = 'max_interval'
+        }
+    }
+    
+    if (logEnable) log.debug "shouldReportValue(${objectId}): thresholdMet:${thresholdMet}, maxTimeMet:${maxTimeMet}, shouldReport:${shouldReport}, reason:${reason}"
+    
+    return [shouldReport: shouldReport, reason: reason]
+}
+
+/**
+ * Check if maximum time has elapsed for an attribute (force reporting even if threshold not met)
+ */
+private boolean hasMaxTimeElapsed(String attributeName) {
+    if (!state.lastReported) state.lastReported = [:]
+    
+    Long lastTime = state.lastReported[attributeName] as Long
+    Long maxInterval = (settings.maxReportingInterval ?: 1800) * 1000
+    Long currentTime = now()
+    
+    if (!lastTime || (currentTime - lastTime) >= maxInterval) {
+        if (logEnable) log.debug "hasMaxTimeElapsed(${attributeName}): Max time elapsed - lastTime:${lastTime}, currentTime:${currentTime}, maxInterval:${maxInterval}ms, returning true"
+        state.lastReported[attributeName] = currentTime
+        return true
+    }
+    if (logEnable) log.debug "hasMaxTimeElapsed(${attributeName}): Max time not elapsed - lastTime:${lastTime}, currentTime:${currentTime}, diff:${currentTime - lastTime}ms, maxInterval:${maxInterval}ms, returning false"
+    return false
 }
 
 // Put this line at the end of the driver to include the ESPHome API library helper

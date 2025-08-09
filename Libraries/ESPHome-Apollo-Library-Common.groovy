@@ -3,6 +3,7 @@
  *  Copyright 2025 Krassimir Kossev (kkossev)
  *
  *  version 1.0.0 - 2025-07-12 kkossev - initial version
+ *  version 1.0.1 - 2025-08-09 kkossev - added universal threshold checking
  *
  *                             TODO: 
  **/
@@ -15,7 +16,7 @@ library(
         importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat/refs/heads/ESPHome/Drivers/ESPHome/Libraries/ESPHome-Apollo-Library-Common.groovy'
 )
 
-@Field static final String APOLLO_COMMON_LIBRARY_VERSION = '1.0.0'
+@Field static final String APOLLO_COMMON_LIBRARY_VERSION = '1.0.1'
 
 metadata {
         if (_DEBUG) {
@@ -162,20 +163,30 @@ void handleTemperatureState(Map message, Map entity, Map entitiesMap) {
     String attributeName = entityInfo.attr
     String description = entityInfo.description
     
-    // Get the previous temperature value
-    def currentTempState = device.currentState(attributeName)
-    String previousValue = currentTempState?.value
+    // Use universal threshold checking if available, otherwise fall back to simple change detection
+    boolean shouldReport = true
+    String suffix = ""
     
-    // Only send event and log if the value has changed
-    if (previousValue != tempStr) {
+    if (this.respondsTo('shouldReportValue')) {
+        Map reportResult = shouldReportValue(objectId, attributeName, temp)
+        shouldReport = reportResult.shouldReport
+        suffix = (reportResult.reason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+    } else {
+        // Fallback: only report if the formatted value has changed
+        def currentTempState = device.currentState(attributeName)
+        String previousValue = currentTempState?.value
+        shouldReport = (previousValue != tempStr)
+    }
+    
+    if (shouldReport && shouldReportDiagnostic(entitiesMap, objectId, settings.diagnosticsReporting)) {
         // Send individual sensor event
-        sendEvent(name: attributeName, value: tempStr, unit: unit, descriptionText: "${description} is ${tempStr} ${unit}")
+        sendEvent(name: attributeName, value: tempStr, unit: unit, descriptionText: "${description} is ${tempStr} ${unit}${suffix}")
         
         // Also update main temperature attribute for Hubitat capability compatibility
-        sendEvent(name: "temperature", value: tempStr, unit: unit, descriptionText: "Temperature is ${tempStr} ${unit}")
+        sendEvent(name: "temperature", value: tempStr, unit: unit, descriptionText: "Temperature is ${tempStr} ${unit}${suffix}")
         
         if (txtEnable) { 
-            log.info "${description} is ${tempStr} ${unit}" 
+            log.info "${description} is ${tempStr} ${unit}${suffix}" 
         }
     }
 }
@@ -205,20 +216,30 @@ void handleHumidityState(Map message, Map entity, Map entitiesMap) {
     String description = entityInfo.description
     String unit = "%rh"  // Hubitat standard unit for relative humidity
     
-    // Get the previous humidity value
-    def currentHumidityState = device.currentState(attributeName)
-    String previousValue = currentHumidityState?.value
+    // Use universal threshold checking if available, otherwise fall back to simple change detection
+    boolean shouldReport = true
+    String suffix = ""
     
-    // Only send event and log if the value has changed
-    if (previousValue != humidityStr) {
+    if (this.respondsTo('shouldReportValue')) {
+        Map reportResult = shouldReportValue(objectId, attributeName, humidity)
+        shouldReport = reportResult.shouldReport
+        suffix = (reportResult.reason == 'max_interval') ? ' [MaxReportingInterval]' : ''
+    } else {
+        // Fallback: only report if the formatted value has changed
+        def currentHumidityState = device.currentState(attributeName)
+        String previousValue = currentHumidityState?.value
+        shouldReport = (previousValue != humidityStr)
+    }
+    
+    if (shouldReport && shouldReportDiagnostic(entitiesMap, objectId, settings.diagnosticsReporting)) {
         // Send individual sensor event
-        sendEvent(name: attributeName, value: humidityStr, unit: unit, descriptionText: "${description} is ${humidityStr} ${unit}")
+        sendEvent(name: attributeName, value: humidityStr, unit: unit, descriptionText: "${description} is ${humidityStr} ${unit}${suffix}")
         
         // Also update main humidity attribute for Hubitat capability compatibility
-        sendEvent(name: "humidity", value: humidityStr, unit: unit, descriptionText: "Humidity is ${humidityStr} ${unit}")
+        sendEvent(name: "humidity", value: humidityStr, unit: unit, descriptionText: "Humidity is ${humidityStr} ${unit}${suffix}")
         
         if (txtEnable) { 
-            log.info "${description} is ${humidityStr} ${unit}" 
+            log.info "${description} is ${humidityStr} ${unit}${suffix}" 
         }
     }
 }

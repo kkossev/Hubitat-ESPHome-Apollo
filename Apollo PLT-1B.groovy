@@ -21,6 +21,7 @@
  *  SOFTWARE.
  *
  *  ver. 1.0.0  2025-07-07 kkossev  - first beta version
+ *  ver. 1.0.1  2025-08-09 kkossev  - (dev. branch version)
  * 
  *                         TODO: add driver version
 */
@@ -28,8 +29,8 @@
 import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = true
-@Field static final String DRIVER_VERSION =  '1.0.0'
-@Field static final String DATE_TIME_STAMP = '07/12/2025 6:26 PM'
+@Field static final String DRIVER_VERSION =  '1.0.1'
+@Field static final String DATE_TIME_STAMP = '08/09/2025 10:10 AM'
 
 metadata {
     definition(
