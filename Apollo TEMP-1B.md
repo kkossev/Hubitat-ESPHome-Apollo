@@ -2,7 +2,7 @@
 
 This driver connects your [Apollo Automation TEMP-1B](https://geni.us/apollo_temp1) sensor **directly to your HE hub** thanks to the great work done by Jonathan Bradshaw (@jonathanb) - the [ESPHome Hubitat Toolkit](https://github.com/bradsjm/hubitat-public/tree/main/ESPHome).
 
-The driver can be installed using the community [Hubitat Package Manager](https://community.hubitat.com/t/release-hubitat-package-manager-hpm-hubitatcommunity/94471/1) app or manually as a Bundle archive from [GitHub](https://github.com/kkossev/Hubitat-ESPHome-Apollo).
+The driver can be installed ~~using the community [Hubitat Package Manager](https://community.hubitat.com/t/release-hubitat-package-manager-hpm-hubitatcommunity/94471/1) app or~~ manually as a Bundle archive from [GitHub](https://github.com/kkossev/Hubitat-ESPHome-Apollo).
 
 - **🚫 No Home Assistant Needed**: Direct WiFi connection to your Hubitat hub
 - **🚫 No YAML Files to Edit**: Simple IP address configuration - that's it!

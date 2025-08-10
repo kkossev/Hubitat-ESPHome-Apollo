@@ -2,7 +2,7 @@
 
 This driver connects your [Apollo Automation AIR-1](https://geni.us/apollo-air-1) sensor **directly to your HE hub** thanks to the great work done by Jonathan Bradshaw (@jonathanb) - the [ESPHome Hubitat Toolkit](https://github.com/bradsjm/hubitat-public/tree/main/ESPHome).
 
-The driver can be installed using the community [Hubitat Package Manager](https://community.hubitat.com/t/release-hubitat-package-manager-hpm-hubitatcommunity/94471/1) app or manually as a Bundle archive from [GitHub](https://github.com/kkossev/Hubitat-ESPHome-Apollo).
+The driver can be installed ~~using the community [Hubitat Package Manager](https://community.hubitat.com/t/release-hubitat-package-manager-hpm-hubitatcommunity/94471/1) app or~~ manually as a Bundle archive from [GitHub](https://github.com/kkossev/Hubitat-ESPHome-Apollo).
 
 - **🚫 No Home Assistant Needed**: Direct WiFi connection to your Hubitat hub
 - **🚫 No YAML Files to Edit**: Simple IP address configuration - that's it!
@@ -55,7 +55,7 @@ The Apollo Automation AIR-1 is ideal for:
 
 |               |                 |
 |---------------|-----------------|
-| [![AIR-1 Main Device](https://apolloautomation.com/cdn/shop/files/AIR-1_Main_Shop.png)](https://geni.us/apollo-air-1) | **Apollo AIR-1 Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Mains-powered operation (USB-C 5V)<br/>• SEN55 Multi-Sensor: PM1/PM2.5/PM4/PM10, VOC, NOx, Temperature, Humidity<br/>• ENS160 Gas Sensor: CO, NH₃, Ethanol, H₂, CH₄, NO₂<br/>• SCD40 CO₂ Sensor: 400-40,000 ppm NDIR detection<br/>• DPS310 Pressure Sensor: Barometric pressure monitoring<br/>• RGB LED indicator with air quality status colors<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Comprehensive air quality monitoring for smart homes |
+| [![AIR-1 Main Device](https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/Images/AIR-1_Main_Shop.png?raw=true)](https://geni.us/apollo-air-1) | **Apollo AIR-1 Features:**<br/>• ESP32-based platform with WiFi and Bluetooth connectivity<br/>• Mains-powered operation (USB-C 5V)<br/>• SEN55 Multi-Sensor: PM1/PM2.5/PM4/PM10, VOC, NOx, Temperature, Humidity<br/>• ENS160 Gas Sensor: CO, NH₃, Ethanol, H₂, CH₄, NO₂<br/>• SCD40 CO₂ Sensor: 400-40,000 ppm NDIR detection<br/>• DPS310 Pressure Sensor: Barometric pressure monitoring<br/>• RGB LED indicator with air quality status colors<br/>• Temperature Range: -40°C to +85°C (-40°F to +185°F)<br/>• Comprehensive air quality monitoring for smart homes |
 
 -----
 
@@ -70,9 +70,11 @@ The Apollo Automation AIR-1 is ideal for:
 The Apollo Automation AIR-1 driver provides comprehensive air quality monitoring capabilities with dozens of available attributes. For everyday use, the driver displays only the essential air quality attributes by default, keeping your device interface clean and focused. Advanced users can enable additional diagnostic attributes through the preferences when needed.
 
 #### Main Attributes
+![Commands and Attributes Overview](https://raw.githubusercontent.com/kkossev/Hubitat-ESPHome-Apollo/refs/heads/main/Images/apollo-temp-1-commands-and-attributes.png)
 - **`carbonDioxide`**: CO₂ concentration from SCD40 sensor (400-40,000 ppm)
 - **`temperature`**: Primary temperature reading from SEN55 sensor
 - **`humidity`**: Relative humidity from SEN55 sensor (0-100% RH)
+- **`pressure`**: Barometric pressure from DPS310 sensor (hPa)
 - **`pm1`**: PM <1µm weight concentration (µg/m³)
 - **`pm25`**: PM <2.5µm weight concentration (µg/m³)
 - **`pm4`**: PM <4µm weight concentration (µg/m³)
@@ -95,6 +97,7 @@ These advanced attributes, disabled by default, provide additional insights and 
 | `carbonDioxide` | number | CO₂ concentration (ppm) from SCD40 sensor |
 | `temperature` | number | Primary temperature reading (°C/°F) |
 | `humidity` | number | Relative humidity percentage |
+| `pressure` | number | Barometric pressure (hPa) |
 | `pm1` | number | PM <1µm weight concentration (µg/m³) |
 | `pm25` | number | PM <2.5µm weight concentration (µg/m³) |
 | `pm4` | number | PM <4µm weight concentration (µg/m³) |
@@ -112,11 +115,8 @@ These advanced attributes, disabled by default, provide additional insights and 
 | `hydrogen` | number | Hydrogen (H₂) gas concentration |
 | `methane` | number | Methane (CH₄) gas concentration |
 | `nitrogenDioxide` | number | Nitrogen Dioxide (NO₂) gas concentration |
-| `sen55Temperature` | number | SEN55 sensor temperature |
-| `sen55Humidity` | number | SEN55 sensor humidity |
 | `sen55TemperatureOffset` | number | SEN55 temperature calibration offset |
 | `sen55HumidityOffset` | number | SEN55 humidity calibration offset |
-| `dps310Pressure` | number | DPS310 barometric pressure sensor |
 | `pm03To1` | number | PM 0.3 to 1 µm concentration |
 | `pm1To25` | number | PM 1 to 2.5 µm concentration |
 | `pm25To4` | number | PM 2.5 to 4 µm concentration |
@@ -138,21 +138,51 @@ These advanced attributes, disabled by default, provide additional insights and 
 - **`ping(value)`** - Measure network round-trip time to device. Parameters: `value` ['ping']. Usage: `ping('ping')`. Updates `rtt` attribute with response time in milliseconds.
 - **`calibrateScd40(value)`** - Calibrate CO₂ sensor to 420ppm (outdoor air reference). Parameters: `value` ['calibrate']. Usage: `calibrateScd40('calibrate')`
 - **`cleanSen55(value)`** - Initiate SEN55 sensor cleaning cycle. Parameters: `value` ['clean']. Usage: `cleanSen55('clean')`
+- **`refreshSensors(value)`** - Refresh all sensors and bypass thresholds temporarily. Parameters: `value` ['refresh']. Usage: `refreshSensors('refresh')`. Forces immediate sensor readings regardless of threshold settings, with events marked `[Refresh]`.
 
 ### Preferences
 
+![Preferences Overview](https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/Images/apollo-air1-preferences.png?raw=true)
 #### Basic Settings
 - **`logEnable`** (false) - Enable debug logging for troubleshooting
 - **`txtEnable`** (true) - Enable descriptive text logging  
 - **`ipAddress`** (required) - Device IP address for ESPHome API connection
 - **`sen55TemperatureOffset`** (0.0) - SEN55 temperature calibration offset (-70° to +70°)
 - **`sen55HumidityOffset`** (0.0) - SEN55 humidity calibration offset (-70% to +70%)
-- **`sleepDuration`** (5) - Sleep duration between measurements (0-800 minutes)
+
+#### Reporting & Thresholds
+- **`maxReportingInterval`** (1800) - Maximum time between sensor reports in seconds (60-14400, default: 30 minutes)
+- **`temperatureChangeThreshold`** (0.3) - Minimum temperature change to report in degrees (0-2°)
+- **`humidityChangeThreshold`** (1.0) - Minimum humidity change to report in percent (0-5%)
+- **`pmChangeThreshold`** (0.5) - Minimum PM concentration change to report in µg/m³ (0-2)
+- **`co2ChangeThreshold`** (10) - Minimum CO₂ change to report in ppm (5-50)
+- **`pressureChangeThreshold`** (0.5) - Minimum pressure change to report in hPa (0-2)
+- **`vocNoxChangeThreshold`** (2) - Minimum VOC/NOx index change to report (1-10)
+- **`gasChangeThreshold`** (5.0) - Minimum gas concentration change to report in ppb (1-20)
 
 #### Advanced Options
 - **`password`** (optional) - Device password if required
 - **`diagnosticsReporting`** (false) - Enable reporting of diagnostic attributes
+- **`sleepDuration`** (5) - Sleep duration between measurements (0-800 minutes)
 - **`logWarnEnable`** (false) - Enable warning and info logging
+
+### Intelligent Reporting System
+
+The driver features an advanced threshold-based reporting system that prevents log spam while ensuring important changes are captured:
+
+#### Threshold-Based Reporting
+- **Smart Filtering**: Only reports sensor changes that exceed configurable thresholds
+- **Customizable Thresholds**: Individual threshold settings for each sensor type
+- **Maximum Interval**: Guarantees at least one report every 30 minutes (configurable)
+- **Event Indicators**: Clear suffixes show why each event was reported:
+  - `[MaxReportingInterval]` - Reported due to time elapsed
+  - `[Refresh]` - Reported due to manual refresh command
+
+#### Benefits
+- **Reduced Log Spam**: Eliminates unnecessary frequent updates
+- **Important Changes Captured**: Significant sensor changes are always reported
+- **Guaranteed Updates**: Maximum interval ensures regular status updates
+- **Manual Override**: `refreshSensors` command bypasses thresholds for immediate readings
 
 ### More info on this driver
 
@@ -173,9 +203,11 @@ The driver uses an intelligent entity management system that:
 The driver provides comprehensive air quality monitoring:
 
 - **Multi-Sensor Integration**: Combines particulate matter, gas, CO₂, and environmental sensors
+- **Intelligent Reporting**: Threshold-based system prevents log spam while capturing important changes
 - **Automatic Unit Conversion**: Converts between Celsius and Fahrenheit based on hub settings
 - **Calibration Support**: Individual offset adjustments for temperature and humidity sensors
 - **Real-time Monitoring**: Continuous monitoring with configurable sleep intervals
+- **Standard Compliance**: Uses Hubitat standard capability attributes for seamless integration
 
 ### Environmental Monitoring
 
@@ -185,6 +217,7 @@ For complete indoor air quality tracking:
 - **Gas Detection**: Six different gas sensors (CO, NH₃, C₂H₅OH, H₂, CH₄, NO₂)
 - **Air Quality Indices**: VOC and NOx indices with quality ratings
 - **Environmental Conditions**: Temperature, humidity, and barometric pressure
+- **Standard Attributes**: Uses Hubitat standard capability attributes (temperature, humidity, pressure)
 - **Visual Indicators**: RGB LED for air quality status notifications
 
 ### Sensor Calibration
@@ -216,6 +249,7 @@ When diagnostic reporting is enabled:
 - **Configuration Access**: View advanced device settings
 - **Calibration Values**: View all sensor offset parameters
 - **Raw Sensor Data**: Access to detailed particulate matter size distributions
+- **Threshold Control**: Individual threshold settings prevent log spam while ensuring important data is captured
 
 ### Air Quality Automation
 

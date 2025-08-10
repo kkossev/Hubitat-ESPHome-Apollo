@@ -21,16 +21,16 @@
  *  SOFTWARE.
  *
  *  ver. 1.0.0  2025-07-12 kkossev  - first beta version based on PLT-1B driver, using the common apollo library.
- *  ver. 1.0.1  2025-08-09 kkossev  - added thresholds for sensor changes
+ *  ver. 1.0.1  2025-08-10 kkossev  - added thresholds for sensor changes; code optimizations
  * 
- *                         TODO: add driver version
+ *                         TODO:
 */
 
 import groovy.transform.Field
 
-@Field static final Boolean _DEBUG = true
+@Field static final Boolean _DEBUG = false
 @Field static final String DRIVER_VERSION =  '1.0.1'
-@Field static final String DATE_TIME_STAMP = '08/09/2025 1:10 PM'
+@Field static final String DATE_TIME_STAMP = '08/10/2025 5:21 PM'
 
 metadata {
     definition(
@@ -53,8 +53,6 @@ metadata {
         // attribute populated by ESPHome API Library automatically
         
         // Primary air quality sensors
-        attribute 'sen55Temperature', 'number'          // SEN55 temperature sensor
-        attribute 'sen55Humidity', 'number'             // SEN55 humidity sensor  
         attribute 'sen55Voc', 'number'                  // SEN55 VOC index
         attribute 'sen55Nox', 'number'                  // SEN55 NOX index
         attribute 'vocQuality', 'string'                // VOC quality text rating
@@ -78,9 +76,6 @@ metadata {
         attribute 'hydrogen', 'number'                  // Hydrogen (H₂)
         attribute 'methane', 'number'                   // Methane (CH₄)
         attribute 'nitrogenDioxide', 'number'           // Nitrogen Dioxide (NO₂)
-        
-        // Environmental sensors
-        attribute 'dps310Pressure', 'number'           // DPS310 pressure sensor
         
         // Configuration and calibration
         attribute 'sen55TemperatureOffset', 'number'   // SEN55 temperature calibration offset
@@ -126,7 +121,7 @@ metadata {
     'ammonia':                             [attr: 'ammonia',                        isDiag: false, type: 'sensor',      description: 'Ammonia (NH₃) gas sensor',                      thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
     'carbon_monoxide':                     [attr: 'carbonMonoxide',                 isDiag: false, type: 'sensor',      description: 'Carbon Monoxide (CO) gas sensor',               thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
     'co2':                                 [attr: 'carbonDioxide',                  isDiag: false, type: 'sensor',      description: 'Carbon Dioxide (CO₂) sensor (SCD40)',           thresholdPref: 'co2ChangeThreshold',        dataType: 'integer'],
-    'dps310_pressure':                     [attr: 'dps310Pressure',                 isDiag: true,  type: 'pressure',    description: 'DPS310 air pressure sensor',                    thresholdPref: 'pressureChangeThreshold',   dataType: 'float'],
+    'dps310_pressure':                     [attr: 'pressure',                       isDiag: false, type: 'pressure',    description: 'DPS310 air pressure sensor',                    thresholdPref: 'pressureChangeThreshold',   dataType: 'float'],
     'ethanol':                             [attr: 'ethanol',                        isDiag: false, type: 'sensor',      description: 'Ethanol (C₂H₅OH) gas sensor',                   thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
     'hydrogen':                            [attr: 'hydrogen',                       isDiag: false, type: 'sensor',      description: 'Hydrogen (H₂) gas sensor',                      thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
     'methane':                             [attr: 'methane',                        isDiag: false, type: 'sensor',      description: 'Methane (CH₄) gas sensor',                      thresholdPref: 'gasChangeThreshold',        dataType: 'float'],
@@ -135,9 +130,9 @@ metadata {
     'pm__2_5_m_weight_concentration':      [attr: 'pm25',                           isDiag: false, type: 'sensor',      description: 'PM <2.5µm weight concentration',                 thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
     'pm__4_m_weight_concentration':        [attr: 'pm4',                            isDiag: false, type: 'sensor',      description: 'PM <4µm weight concentration',                   thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
     'pm__10_m_weight_concentration':       [attr: 'pm10',                           isDiag: false, type: 'sensor',      description: 'PM <10µm weight concentration',                  thresholdPref: 'pmChangeThreshold',         dataType: 'float'],
-    'sen55_humidity':                      [attr: 'sen55Humidity',                  isDiag: false, type: 'sensor',      description: 'SEN55 humidity sensor',                         thresholdPref: 'humidityChangeThreshold',   dataType: 'float'],
+    'sen55_humidity':                      [attr: 'humidity',                       isDiag: false, type: 'sensor',      description: 'SEN55 humidity sensor',                         thresholdPref: 'humidityChangeThreshold',   dataType: 'float'],
     'sen55_nox':                           [attr: 'sen55Nox',                       isDiag: false, type: 'sensor',      description: 'SEN55 NOX index',                               thresholdPref: 'vocNoxChangeThreshold',     dataType: 'integer'],
-    'sen55_temperature':                   [attr: 'sen55Temperature',               isDiag: false, type: 'temperature', description: 'SEN55 temperature sensor',                      thresholdPref: 'temperatureChangeThreshold', dataType: 'float'],
+    'sen55_temperature':                   [attr: 'temperature',                    isDiag: false, type: 'temperature', description: 'SEN55 temperature sensor',                      thresholdPref: 'temperatureChangeThreshold', dataType: 'float'],
     'sen55_voc':                           [attr: 'sen55Voc',                       isDiag: false, type: 'sensor',      description: 'SEN55 VOC index',                               thresholdPref: 'vocNoxChangeThreshold',     dataType: 'integer'],
     'voc_quality':                         [attr: 'vocQuality',                     isDiag: false, type: 'text',        description: 'VOC quality rating'],
     
@@ -651,12 +646,11 @@ private void handlePressureState(Map message, Map entity) {
     
     Float pressure = message.state as Float
     String pressureStr = String.format("%.1f", pressure)
-    String attributeName = entityInfo.attr
     String description = entityInfo.description
     String unit = "hPa"
     
     // Only report if threshold exceeded using universal method
-    Map reportResult = shouldReportValue(objectId, attributeName, pressure)
+    Map reportResult = shouldReportValue(objectId, 'pressure', pressure)
     if (reportResult.shouldReport) {
         String suffix = ''
         if (reportResult.reason == 'max_interval') {
@@ -666,15 +660,10 @@ private void handlePressureState(Map message, Map entity) {
         }
         boolean forceStateChange = (reportResult.reason == 'max_interval' || reportResult.reason == 'refresh')
         
-        // Send individual sensor event
-        Map eventData1 = [name: attributeName, value: pressureStr, unit: unit, descriptionText: "${description} is ${pressureStr} ${unit}${suffix}"]
-        if (forceStateChange) eventData1.isStateChange = true
-        sendEvent(eventData1)
-        
-        // Also update main pressure attribute for Hubitat capability compatibility
-        Map eventData2 = [name: "pressure", value: pressureStr, unit: unit, descriptionText: "Pressure is ${pressureStr} ${unit}${suffix}"]
-        if (forceStateChange) eventData2.isStateChange = true
-        sendEvent(eventData2)
+        // Send pressure event for Hubitat capability compatibility
+        Map eventData = [name: "pressure", value: pressureStr, unit: unit, descriptionText: "Pressure is ${pressureStr} ${unit}${suffix}"]
+        if (forceStateChange) eventData.isStateChange = true
+        sendEvent(eventData)
         
         if (txtEnable) { 
             log.info "${description}: ${pressureStr} ${unit}${suffix}".trim()
