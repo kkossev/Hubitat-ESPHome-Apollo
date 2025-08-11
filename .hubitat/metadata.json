@@ -40,7 +40,7 @@
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Apollo MSR-2.groovy",
       "id": 4060,
       "codeType": "driver",
-      "version": 77
+      "version": 80
     },
     {
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Apollo PLT-1B.groovy",
@@ -64,7 +64,7 @@
       "filepath": "/c:/Work/Hubitat-ESPHome-Apollo/Libraries/ESPHome-Apollo-Library-Common.groovy",
       "codeType": "library",
       "id": 196,
-      "version": 39
+      "version": 40
     }
   ]
 }
