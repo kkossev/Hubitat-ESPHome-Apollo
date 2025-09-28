@@ -1,6 +1,10 @@
 /**
+ *  ESPHome Apollo PLT-1(B) Driver for Hubitat Elevation
+ * 
+ *  https://community.hubitat.com/t/beta-esphome-apollo-automation-plt-1-b-plant-sensor-driver/155092
+ *
  *  MIT License
- *  Copyright 2022 Jonathan Bradshaw (jb@nrgup.net)
+ *  Copyright 2025 Krassimir Kossev
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal

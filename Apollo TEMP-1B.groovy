@@ -1,6 +1,10 @@
 /**
+ *  ESPHome Apollo TEMP-1(B) Driver for Hubitat Elevation
+ *
+ *  https://community.hubitat.com/t/beta-esphome-apollo-automation-temp-1b-driver/154860
+ *
  *  MIT License
- *  Copyright 2022 Jonathan Bradshaw (jb@nrgup.net)
+ *  Copyright 2025 Krassimir Kossev
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -20,17 +24,18 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  *
- *  ver. 1.0.0  2022-07-04 kkossev  - first beta version
- *  ver. 1.0.1  2022-07-12 kkossev  - use a Common library for ESPHome Apollo drivers
+ *  ver. 1.0.0  2025-07-04 kkossev  - first beta version
+ *  ver. 1.0.1  2025-07-12 kkossev  - use a Common library for ESPHome Apollo drivers
+ *  ver. 1.0.2  2025-09-28 kkossev  - bugfix: temperature_probe removed from the diagnostic attributes group (tnx @rewilson42)
  * 
  *                         TODO: 
 */
 
 import groovy.transform.Field
 
-@Field static final Boolean _DEBUG = true
-@Field static final String DRIVER_VERSION =  '1.0.1'
-@Field static final String DATE_TIME_STAMP = '07/12/2025 9:58 PM'
+@Field static final Boolean _DEBUG = false
+@Field static final String DRIVER_VERSION =  '1.0.2'
+@Field static final String DATE_TIME_STAMP = '09/28/2025 9:14 AM'
 
 metadata {
     definition(
@@ -103,7 +108,7 @@ metadata {
     'rssi':                                [attr: 'rssi',                           isDiag: true,  type: 'signal',      description: 'WiFi signal strength indicator'],
     'select_probe':                        [attr: 'selectedProbe',                  isDiag: true,  type: 'selector',    description: 'Active temperature probe selection'],
     'sleep_duration':                      [attr: 'sleepDuration',                  isDiag: true,  type: 'config',      description: 'Device sleep duration between measurements'],
-    'temperature_probe':                   [attr: 'temperatureProbe',               isDiag: true,  type: 'temperature', description: 'Primary external temperature probe reading'],
+    'temperature_probe':                   [attr: 'temperatureProbe',               isDiag: false, type: 'temperature', description: 'Primary external temperature probe reading'],
     'temp_probe_offset':                   [attr: 'tempProbeOffset',                isDiag: true,  type: 'offset',      description: 'Temperature probe calibration offset'],
     'uptime':                              [attr: 'uptime',                         isDiag: true,  type: 'status',      description: 'Device uptime since last restart']
 ]

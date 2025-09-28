@@ -1,6 +1,10 @@
 /**
+ *  ESPHome Apollo AIR-1 Driver for Hubitat Elevation
+ *
+ *  https://community.hubitat.com/t/beta-apollo-automation-air-1-driver/155982
+ *
  *  MIT License
- *  Copyright 2022 Jonathan Bradshaw (jb@nrgup.net)
+ *  Copyright 2025 Krassimir Kossev
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal

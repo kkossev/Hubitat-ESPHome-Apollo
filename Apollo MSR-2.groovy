@@ -1,6 +1,10 @@
 /**
+ *  ESPHome Apollo MSR-2 Driver for Hubitat Elevation
+ *
+ *  https://community.hubitat.com/
+ *
  *  MIT License
- *  Copyright 2022 Jonathan Bradshaw (jb@nrgup.net)
+ *  Copyright 2025 Krassimir Kossev
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +24,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  *
- *  ver. 1.0.0  2022-07-01 kkossev  - first beta version
+ *  ver. 1.0.0  2025-07-01 kkossev  - first beta version
  *  ver. 1.2.0  2025-08-11 kkossev  - major refactoring using AIR-1 pattern; added thresholds; common library integration
  * 
  *                         TODO:

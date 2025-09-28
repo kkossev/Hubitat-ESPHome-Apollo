@@ -1,10 +1,10 @@
 {
  "packageName":"ESPHome Apollo Automation Drivers",
  "author":"Krassimir Kossev",
- "version":"1.0.2",
+ "version":"1.0.3",
  "minimumHEVersion":"2.3.8.100",
- "dateReleased":"2025-08-10",
- "releaseNotes":"1.0.2 - added AIR-1 driver\n1.0.1 - added PLT-1 driver\n1.0.0 - first Beta version",
+ "dateReleased":"2025-09-28",
+ "releaseNotes":"1.0.3 - TEMP-1: bugfix: temperature_probe removed from the diagnostic attributes group\n1.0.2 - added AIR-1 driver\n1.0.1 - added PLT-1 driver\n1.0.0 - first Beta version",
  "documentationLink":"https://github.com/kkossev/Hubitat-ESPHome-Apollo/blob/main/README.md",
  "communityLink":"https://community.hubitat.com/t/esphome-hubitat/68341",
  "bundles": [
