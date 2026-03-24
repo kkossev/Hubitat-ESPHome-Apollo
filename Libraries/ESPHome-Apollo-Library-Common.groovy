@@ -4,6 +4,7 @@
  *
  *  version 1.0.0 - 2025-07-12 kkossev - initial version
  *  version 1.0.1 - 2025-08-09 kkossev - added universal threshold checking
+ *  version 1.0.2 - 2026-03-24 kkossev - bugfix: checkDriverVersion; refresh() does not delete state anymore; commented out duplicated advancedOptions;
  *
  *                             TODO: 
  **/
@@ -16,7 +17,7 @@ library(
         importUrl: 'https://raw.githubusercontent.com/kkossev/Hubitat/refs/heads/ESPHome/Drivers/ESPHome/Libraries/ESPHome-Apollo-Library-Common.groovy'
 )
 
-@Field static final String APOLLO_COMMON_LIBRARY_VERSION = '1.0.1'
+@Field static final String APOLLO_COMMON_LIBRARY_VERSION = '1.0.2'
 
 metadata {
         if (_DEBUG) {
@@ -59,6 +60,7 @@ metadata {
         //input name: 'txtEnable', type: 'bool', title: '<b>Enable descriptionText logging</b>', defaultValue: true, description: '<i>Enables command logging.'
         //input name: 'logEnable', type: 'bool', title: '<b>Enable debug logging</b>', defaultValue: true, description: 'Turns on debug logging for 24 hours.'
 
+        /*
         if (device) {
             input name: 'advancedOptions', type: 'bool', title: '<b>Advanced Options</b>', description: 'These advanced options should be already automatically set in an optimal way for your device...', defaultValue: false
             if (advancedOptions == true) {
@@ -67,6 +69,7 @@ metadata {
                 //input name: 'traceEnable', type: 'bool', title: '<b>Enable trace logging</b>', defaultValue: false, description: 'Turns on detailed extra trace logging for 30 minutes.'
             }
         }
+        */
     }
 }
 
@@ -298,9 +301,9 @@ void logsOff() {
  * Refresh device state - clears state and requests device info
  */
 void refresh() {
-    checkDriverVersion()
+    checkDriverVersion(DRIVER_VERSION, DATE_TIME_STAMP, _DEBUG)
     log.info "${device} refresh"
-    state.clear()
+    // state.clear()
     state.requireRefresh = true
     espHomeDeviceInfoRequest()
 }
@@ -480,16 +483,14 @@ void espReboot(String value) {
  * @param value command value ('ping' to execute, anything else is ignored)
  */
 void ping(String value = 'ping') {
+    checkDriverVersion(DRIVER_VERSION, DATE_TIME_STAMP, _DEBUG)
     if (value != 'ping') {
         log.warn "Unsupported ping value: ${value}"
         return
     }
-    
     // Record the start time for RTT measurement
     state.pingStartTime = now()
-    
     if (settings?.txtEnable) { log.info "${device} sending ping to measure RTT" }
-    
     // Send a harmless device info request - all ESPHome devices support this
     espHomeDeviceInfoRequest()
 }

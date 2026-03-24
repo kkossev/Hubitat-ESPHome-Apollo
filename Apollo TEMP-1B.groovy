@@ -27,6 +27,7 @@
  *  ver. 1.0.0  2025-07-04 kkossev  - first beta version
  *  ver. 1.0.1  2025-07-12 kkossev  - use a Common library for ESPHome Apollo drivers
  *  ver. 1.0.2  2025-09-28 kkossev  - bugfix: temperature_probe removed from the diagnostic attributes group (tnx @rewilson42)
+ *  ver. 1.0.4  2026-03-24 kkossev  - bugfix: null-safe exception handling (tnx @rewilson42)
  * 
  *                         TODO: 
 */
@@ -34,8 +35,8 @@
 import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = false
-@Field static final String DRIVER_VERSION =  '1.0.2'
-@Field static final String DATE_TIME_STAMP = '09/28/2025 9:14 AM'
+@Field static final String DRIVER_VERSION =  '1.0.4'
+@Field static final String DATE_TIME_STAMP = '03/24/2026 10:54 PM'
 
 metadata {
     definition(
@@ -250,8 +251,13 @@ void parseKeys(final Map message) {
  */
 void parseState(final Map message) {
     if (message.key == null) { return }
-    
     final Long key = message.key as Long        
+
+    if (state.entities == null) { 
+        if (logEnable) log.warn "parseState: state.entities not yet populated, skipping key ${key}" 
+        return 
+    }    
+
     def entity = state.entities["$key"]
     if (logEnable) {
         log.debug "parseState: key=${key}, objectId=${entity?.objectId}, state=${message.state}"
