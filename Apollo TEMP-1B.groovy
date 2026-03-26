@@ -28,6 +28,7 @@
  *  ver. 1.0.1  2025-07-12 kkossev  - use a Common library for ESPHome Apollo drivers
  *  ver. 1.0.2  2025-09-28 kkossev  - bugfix: temperature_probe removed from the diagnostic attributes group (tnx @rewilson42)
  *  ver. 1.0.4  2026-03-24 kkossev  - bugfix: null-safe exception handling (tnx @rewilson42)
+ *  ver. 1.0.5  2026-03-26 kkossev  - added temperatureProbe2 (tnx @rewilson42); using API_HELPER_VERSION 3.0.0 (community version 1.3)
  * 
  *                         TODO: 
 */
@@ -35,8 +36,8 @@
 import groovy.transform.Field
 
 @Field static final Boolean _DEBUG = false
-@Field static final String DRIVER_VERSION =  '1.0.4'
-@Field static final String DATE_TIME_STAMP = '03/24/2026 10:54 PM'
+@Field static final String DRIVER_VERSION =  '1.0.5'
+@Field static final String DATE_TIME_STAMP = '03/26/2026 7:31 AM'
 
 metadata {
     definition(
@@ -56,7 +57,8 @@ metadata {
 
         // attribute populated by ESPHome API Library automatically
         attribute "boardTemperature", "number"
-        attribute 'temperatureProbe', 'number'  // Add this line
+        attribute 'temperatureProbe', 'number'
+        attribute 'temperatureProbe2', 'number' // added in v1.0.5
         attribute 'foodProbe', 'number'
         attribute 'alarmOutsideTempRange', 'enum', ['on', 'off']
         attribute 'tempProbeOffset', 'number'
@@ -110,6 +112,7 @@ metadata {
     'select_probe':                        [attr: 'selectedProbe',                  isDiag: true,  type: 'selector',    description: 'Active temperature probe selection'],
     'sleep_duration':                      [attr: 'sleepDuration',                  isDiag: true,  type: 'config',      description: 'Device sleep duration between measurements'],
     'temperature_probe':                   [attr: 'temperatureProbe',               isDiag: false, type: 'temperature', description: 'Primary external temperature probe reading'],
+    'temperature_probe_2':                 [attr: 'temperatureProbe2',              isDiag: false, type: 'temperature', description: 'Secondary external temperature probe reading'],
     'temp_probe_offset':                   [attr: 'tempProbeOffset',                isDiag: true,  type: 'offset',      description: 'Temperature probe calibration offset'],
     'uptime':                              [attr: 'uptime',                         isDiag: true,  type: 'status',      description: 'Device uptime since last restart']
 ]
@@ -484,4 +487,5 @@ private void handleSelectProbeState(Map message) {
 // Put this line at the end of the driver to include the ESPHome API library helper
 
 #include esphome.espHomeApiHelperKKmod
+//#include esphome.espHomeApiHelper
 #include apollo.espHomeApolloLibraryCommon
